@@ -26,13 +26,13 @@ class WorkoutBase(BaseModel):
     date: date
 
 class WorkoutCreate(WorkoutBase):
-    exercises: list[WorkoutSetCreate]
+    sets: list[WorkoutSetCreate]
 
 class WorkoutResponse(WorkoutBase):
     id: int
     user_id: int
     created_at: datetime
-    exercises: list[WorkoutSetResponse] = []
+    sets: list[WorkoutSetResponse] = []
 
     class Config:
         from_attributes = True

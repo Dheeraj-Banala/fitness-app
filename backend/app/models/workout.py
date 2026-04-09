@@ -12,6 +12,7 @@ class Workout(Base):
     notes = Column(String, nullable=True)
     date = Column(Date, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    sets = relationship("WorkoutSet", back_populates="workout")
 
 class WorkoutSet(Base):
     __tablename__ = "workout_sets"
@@ -26,3 +27,4 @@ class WorkoutSet(Base):
     duration_seconds = Column(Integer, nullable=True)
     distance_km = Column(Float, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    workout = relationship("Workout", back_populates="sets")
