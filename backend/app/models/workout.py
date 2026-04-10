@@ -12,7 +12,7 @@ class Workout(Base):
     notes = Column(String, nullable=True)
     date = Column(Date, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    sets = relationship("WorkoutSet", back_populates="workout")
+    sets = relationship("WorkoutSet", back_populates="workout", cascade="all, delete-orphan")
 
 class WorkoutSet(Base):
     __tablename__ = "workout_sets"

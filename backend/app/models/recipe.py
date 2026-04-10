@@ -12,7 +12,7 @@ class Recipe(Base):
     description = Column(String, nullable=True)
     servings = Column(Float, nullable=False, default=1)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    ingredients = relationship("RecipeIngredient", back_populates="recipe")
+    ingredients = relationship("RecipeIngredient", back_populates="recipe", cascade="all, delete-orphan")
 
 
 class RecipeIngredient(Base):
