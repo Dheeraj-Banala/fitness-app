@@ -7,6 +7,7 @@ from .routes import food_log as food_log_router
 from .routes import workout as workout_router
 from .routes import food as food_router
 from .routes import recipe as recipe_router
+from .routes import user as user_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -18,6 +19,7 @@ app.include_router(food_log_router.router)
 app.include_router(workout_router.router)
 app.include_router(food_router.router)
 app.include_router(recipe_router.router)
+app.include_router(user_router.router)
 
 @app.get("/health")
 def health_check():
