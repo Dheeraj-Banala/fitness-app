@@ -4,6 +4,7 @@ from ..database import get_db
 from ..models.food import Food
 from ..schemas.food import FoodCreate, FoodResponse
 from ..auth import get_current_user
+from ..services.food_api import search_open_food_facts, search_usda
 
 router = APIRouter(prefix="/foods", tags=["foods"])
 
@@ -21,6 +22,13 @@ def get_foods(search: str | None = None, db: Session = Depends(get_db)):
     if search:
         query = query.filter(Food.name.ilike(f"%{search}%"))
     return query.all()
+
+@router.get("/search/external")
+def search_external_foods(query: str, current_user = Depends(get_current_user)):
+    try:
+        return search_usda(query)
+    except Exception:
+        return search_open_food_facts(query)
 
 @router.get("/{food_id}", response_model=FoodResponse)
 def get_food_by_id(food_id: int, db: Session = Depends(get_db)):
