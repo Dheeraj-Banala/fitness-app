@@ -3,12 +3,13 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.food import Food
 from ..schemas.food import FoodCreate, FoodResponse
+from ..auth import get_current_user
 
 router = APIRouter(prefix="/foods", tags=["foods"])
 
 @router.post("/", response_model=FoodResponse)
-def post_food(log: FoodCreate, db: Session = Depends(get_db)):
-    db_log = Food(**log.model_dump(), user_id=1)
+def post_food(log: FoodCreate, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_log = Food(**log.model_dump(), user_id=current_user.id)
     db.add(db_log)
     db.commit()
     db.refresh(db_log)
@@ -29,8 +30,8 @@ def get_food_by_id(food_id: int, db: Session = Depends(get_db)):
     return db_response
 
 @router.delete("/{food_id}")
-def delete_food(food_id: int, db: Session = Depends(get_db)):
-    db_response = db.query(Food).filter(Food.id == food_id).first()
+def delete_food(food_id: int, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_response = db.query(Food).filter(Food.id == food_id, Food.user_id == current_user.id).first()
     if db_response is None:
         raise HTTPException(status_code=404, detail="Log not found")
     else:
