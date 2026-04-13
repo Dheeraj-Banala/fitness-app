@@ -15,3 +15,4 @@ class FoodLog(Base):
     unit = Column(String, nullable=False)
     date = Column(Date, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    food = relationship("Food")

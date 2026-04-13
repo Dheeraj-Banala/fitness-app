@@ -1,6 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import FoodLogScreen from '../screens/FoodLogScreen';
+import FoodLogStack from './FoodLogStack';
 import WorkoutsStack from './WorkoutsStack';
 import WeightScreen from '../screens/WeightScreen';
 import WaterScreen from '../screens/WaterScreen';
@@ -12,7 +12,7 @@ const Tab = createBottomTabNavigator();
 export default function TabNavigator() {
     return (
         <Tab.Navigator>
-            <Tab.Screen name="Food Log" component={FoodLogScreen} />
+            <Tab.Screen name="Food Log" component={FoodLogStack} />
             <Tab.Screen name="Workouts" component={WorkoutsStack} />
             <Tab.Screen name="Weight" component={WeightScreen} />
             <Tab.Screen name="Water" component={WaterScreen} />
