@@ -2,13 +2,14 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider, useAuth } from './app/context/AuthContext';
 import TabNavigator from './app/navigation/TabNavigator';
-import LoginScreen from './app/screens/LoginScreen';
+import AuthStack from './app/navigation/AuthStack';
 
 function RootNavigator() {
-  const { token } = useAuth();
+  const { token, isLoading } = useAuth();
+  if (isLoading) return null;
   return (
     <NavigationContainer>
-      {token ? <TabNavigator /> : <LoginScreen />}
+      {token ? <TabNavigator /> : <AuthStack />}
     </NavigationContainer>
   );
 }
