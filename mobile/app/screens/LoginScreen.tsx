@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { apiFetch } from '../services/api';
 
 export default function LoginScreen() {
-    const { setToken } = useAuth();
+    const { setTokens } = useAuth();
     const navigation = useNavigation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -17,7 +17,7 @@ export default function LoginScreen() {
                 method: 'POST',
                 body: JSON.stringify({ email, password }),
             });
-            setToken(data.access_token);
+            setTokens(data.access_token, data.refresh_token);
         } catch(e) {
             setError('Invalid email or password');
         }

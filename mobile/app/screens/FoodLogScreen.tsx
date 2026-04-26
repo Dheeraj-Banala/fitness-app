@@ -16,10 +16,14 @@ type FoodLogEntry = {
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
+function toLocalDateString(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function FoodLogScreen() {
   const { token } = useAuth();
   const navigation = useNavigation();
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(toLocalDateString(new Date()));
   const [logs, setLogs] = useState<FoodLogEntry[]>([]);
 
   useFocusEffect(
@@ -36,9 +40,10 @@ export default function FoodLogScreen() {
   }
 
   function changeDate(days: number) {
-    const d = new Date(date);
+    const [year, month, day] = date.split('-').map(Number);
+    const d = new Date(year, month - 1, day);
     d.setDate(d.getDate() + days);
-    setDate(d.toISOString().split('T')[0]);
+    setDate(toLocalDateString(d));
   }
 
   function logsForMeal(mealType: string) {

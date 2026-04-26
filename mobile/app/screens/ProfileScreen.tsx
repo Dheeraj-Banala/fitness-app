@@ -10,7 +10,7 @@ type UserProfile = {
 };
 
 export default function ProfileScreen() {
-  const { token, setToken } = useAuth();
+  const { token, refreshToken, setTokens } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
@@ -26,8 +26,15 @@ export default function ProfileScreen() {
     }
   }
 
-  function handleLogout() {
-    setToken(null);
+  async function handleLogout() {
+    try {
+      await apiFetch('/users/logout', token, {
+        method: 'POST',
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+    } finally {
+      setTokens(null, null)
+    }
   }
 
   return (

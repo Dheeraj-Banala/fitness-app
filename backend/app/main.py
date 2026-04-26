@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from .database import Base, engine
-from .models import user, food, recipe, food_log, workout, water_log, weight_log, user_goals
+from .models import user, food, recipe, food_log, workout, water_log, weight_log, user_goals, refresh_token
 from .routes import weight_log as weight_log_router
 from .routes import water_log as water_log_router
 from .routes import food_log as food_log_router
