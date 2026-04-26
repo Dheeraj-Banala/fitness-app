@@ -45,6 +45,23 @@ export default function FoodLogScreen() {
     return logs.filter(log => log.meal_type === mealType);
   }
 
+  function dailyTotals() {
+    let calories = 0, protein = 0, carbs = 0, fat = 0;
+    for (const log of logs) {
+      const scale = log.quantity / 100;
+      calories += log.food?.calories ? log.food.calories * scale : 0;
+      protein += log.food?.protein ? log.food.protein * scale : 0;
+      carbs += log.food?.carbs ? log.food.carbs * scale : 0;
+      fat += log.food?.fat ? log.food.fat * scale : 0;
+    }
+    return {
+      calories: Math.round(calories),
+      protein: Math.round(protein),
+      carbs: Math.round(carbs),
+      fat: Math.round(fat),
+    };
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.dateRow}>
@@ -56,6 +73,20 @@ export default function FoodLogScreen() {
           <Text style={styles.arrow}>{'>'}</Text>
         </TouchableOpacity>
       </View>
+
+      {(() => {
+        const totals = dailyTotals();
+        return (
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryCalories}>{totals.calories} kcal</Text>
+            <View style={styles.summaryMacros}>
+              <Text style={styles.summaryMacro}>P: {totals.protein}g</Text>
+              <Text style={styles.summaryMacro}>C: {totals.carbs}g</Text>
+              <Text style={styles.summaryMacro}>F: {totals.fat}g</Text>
+            </View>
+          </View>
+        );
+      })()}
 
       {MEAL_TYPES.map(mealType => (
         <View key={mealType} style={styles.mealSection}>
@@ -98,4 +129,8 @@ const styles = StyleSheet.create({
   logItem: { padding: 8, backgroundColor: '#f5f5f5', borderRadius: 6, marginBottom: 4 },
   logName: { fontSize: 15, fontWeight: '500' },
   logDetail: { color: '#666', marginTop: 2, fontSize: 13 },
+  summaryCard: { backgroundColor: '#f0f0f0', borderRadius: 10, padding: 14, marginBottom: 16, alignItems: 'center' },
+  summaryCalories: { fontSize: 22, fontWeight: 'bold', marginBottom: 4 },
+  summaryMacros: { flexDirection: 'row', gap: 16 },
+  summaryMacro: { fontSize: 14, color: '#555' },
 });
