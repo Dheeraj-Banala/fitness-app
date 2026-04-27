@@ -14,6 +14,7 @@ type FoodResult = {
   external_id: string | null;
   serving_size: number;
   serving_unit: string;
+  data_type: string | null;
 };
 
 export default function AddFoodScreen() {
@@ -90,7 +91,7 @@ export default function AddFoodScreen() {
       {selectedFood ? (
         <View style={styles.confirmBox}>
           <Text style={styles.confirmName}>{selectedFood.name}</Text>
-          <Text style={styles.confirmCals}>{selectedFood.calories} kcal per {selectedFood.serving_size}{selectedFood.serving_unit}</Text>
+          <Text style={styles.confirmCals}>per 100{selectedFood.serving_unit}</Text>
           <TextInput
             style={styles.input}
             placeholder={`Quantity (${selectedFood.serving_unit})`}
@@ -98,6 +99,19 @@ export default function AddFoodScreen() {
             onChangeText={setQuantity}
             keyboardType="decimal-pad"
           />
+          {(() => {
+            const scale = (parseFloat(quantity) || 0) / 100;
+            return (
+              <View style={styles.macroBox}>
+                <Text style={styles.macroCalories}>{Math.round((selectedFood.calories ?? 0) * scale)} kcal</Text>
+                <View style={styles.macroRow}>
+                  <Text style={styles.macroItem}>P: {Math.round((selectedFood.protein ?? 0) * scale)}g</Text>
+                  <Text style={styles.macroItem}>C: {Math.round((selectedFood.carbs ?? 0) * scale)}g</Text>
+                  <Text style={styles.macroItem}>F: {Math.round((selectedFood.fat ?? 0) * scale)}g</Text>
+                </View>
+              </View>
+            );
+          })()}
           <TouchableOpacity style={styles.logButton} onPress={handleConfirmLog}>
             <Text style={styles.logButtonText}>Log Food</Text>
           </TouchableOpacity>
@@ -111,7 +125,10 @@ export default function AddFoodScreen() {
           keyExtractor={(item, index) => index.toString()}
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.resultItem} onPress={() => handleLog(item)}>
-              <Text style={styles.resultName}>{item.name}</Text>
+              <Text style={styles.resultName}>
+                {item.name}
+                {item.data_type ? <Text style={styles.resultDataType}>  ·  {item.data_type}</Text> : ''}
+              </Text>
               <Text style={styles.resultCals}>{item.calories ?? '?'} kcal per 100g</Text>
             </TouchableOpacity>
           )}
@@ -129,6 +146,7 @@ const styles = StyleSheet.create({
   searchButtonText: { color: 'white', fontWeight: '600' },
   resultItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
   resultName: { fontSize: 16, fontWeight: '500' },
+  resultDataType: { color: '#999', fontWeight: '400', fontSize: 14 },
   resultCals: { color: '#666', marginTop: 2 },
   confirmBox: { backgroundColor: '#f5f5f5', padding: 16, borderRadius: 12 },
   confirmName: { fontSize: 18, fontWeight: '600', marginBottom: 4 },
@@ -137,4 +155,8 @@ const styles = StyleSheet.create({
   logButton: { backgroundColor: '#34C759', padding: 14, borderRadius: 8, alignItems: 'center', marginBottom: 8 },
   logButtonText: { color: 'white', fontWeight: '600', fontSize: 16 },
   cancelText: { color: '#FF3B30', textAlign: 'center', padding: 8 },
+  macroBox: { backgroundColor: 'white', borderRadius: 8, padding: 12, marginBottom: 12, alignItems: 'center' },
+  macroCalories: { fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
+  macroRow: { flexDirection: 'row', gap: 16 },
+  macroItem: { fontSize: 14, color: '#555' },
 });

@@ -44,10 +44,14 @@ def search_open_food_facts(query: str) -> list[dict]:
         })
     return results
 
+def _pos(value):
+    return max(0, value) if value is not None else None
+
 def search_usda(query: str) -> list[dict]:
     params = {
         "query": query,
-        "pageSize": 10,
+        "pageSize": 20,
+        "dataType": "Foundation,SR Legacy",
         "api_key": os.getenv("USDA_API_KEY")
     }
 
@@ -63,15 +67,16 @@ def search_usda(query: str) -> list[dict]:
             "name": food.get("description", ""),
             "source": "usda",
             "external_id": str(food.get("fdcId")),
+            "data_type": food.get("dataType"),
             "serving_size": 100,
             "serving_unit": "g",
-            "calories": nutrients.get("Energy"),
-            "protein": nutrients.get("Protein"),
-            "carbs": nutrients.get("Carbohydrate, by difference"),
-            "fat": nutrients.get("Total lipid (fat)"),
-            "fiber": nutrients.get("Fiber, total dietary"),
-            "sugar": nutrients.get("Sugars, total including NLEA"),
-            "saturated_fat": nutrients.get("Fatty acids, total saturated"),
-            "sodium": nutrients.get("Sodium, Na"),
+            "calories": nutrients.get("Energy") or nutrients.get("Energy (Atwater General Factors)") or nutrients.get("Energy (Atwater Specific Factors)"),
+            "protein": _pos(nutrients.get("Protein")),
+            "carbs": _pos(nutrients.get("Carbohydrate, by difference")),
+            "fat": _pos(nutrients.get("Total lipid (fat)")),
+            "fiber": _pos(nutrients.get("Fiber, total dietary")),
+            "sugar": _pos(nutrients.get("Sugars, total including NLEA")),
+            "saturated_fat": _pos(nutrients.get("Fatty acids, total saturated")),
+            "sodium": _pos(nutrients.get("Sodium, Na")),
         })
     return results

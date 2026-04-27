@@ -50,6 +50,13 @@ export default function FoodLogScreen() {
     return logs.filter(log => log.meal_type === mealType);
   }
 
+  async function handleDelete(logId: number) {
+    try {
+      await apiFetch(`/food-logs/${logId}`, token,  { method: 'DELETE' });
+      loadLogs();
+    } catch (e) {}
+  }
+
   function dailyTotals() {
     let calories = 0, protein = 0, carbs = 0, fat = 0;
     for (const log of logs) {
@@ -110,9 +117,16 @@ export default function FoodLogScreen() {
 
               return (
                   <View key={log.id} style={styles.logItem}>
-                      <Text style={styles.logName}>{log.food?.name ?? 'Unknown food'}</Text>
-                      <Text style={styles.logDetail}>{log.quantity}{log.unit} · {cals ?? '?'} kcal</Text>
-                      <Text style={styles.logDetail}>P: {protein ?? '?'}g · C: {carbs ?? '?'}g · F: {fat ?? '?'}g</Text>
+                      <View style={styles.logRow}>
+                          <View style={styles.logInfo}>
+                              <Text style={styles.logName}>{log.food?.name ?? 'Unknown food'}</Text>
+                              <Text style={styles.logDetail}>{log.quantity}{log.unit} · {cals ?? '?'} kcal</Text>
+                              <Text style={styles.logDetail}>P: {protein ?? '?'}g · C: {carbs ?? '?'}g · F: {fat ?? '?'}g</Text>
+                          </View>
+                          <TouchableOpacity onPress={() => handleDelete(log.id)}>
+                              <Text style={styles.deleteButton}>✕</Text>
+                          </TouchableOpacity>
+                      </View>
                   </View>
               );
           })}
@@ -138,4 +152,7 @@ const styles = StyleSheet.create({
   summaryCalories: { fontSize: 22, fontWeight: 'bold', marginBottom: 4 },
   summaryMacros: { flexDirection: 'row', gap: 16 },
   summaryMacro: { fontSize: 14, color: '#555' },
+  logRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  logInfo: { flex: 1 },
+  deleteButton: { color: '#FF3B30', fontSize: 16, paddingLeft: 12 },
 });
