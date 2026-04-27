@@ -16,3 +16,4 @@ class FoodLog(Base):
     date = Column(Date, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     food = relationship("Food")
+    recipe = relationship("Recipe")

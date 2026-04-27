@@ -29,6 +29,10 @@ class RecipeResponse(RecipeBase):
     user_id: int
     created_at: datetime
     ingredients: list[RecipeIngredientResponse] = []
+    calories: float | None = None
+    protein: float | None = None
+    carbs: float | None = None
+    fat: float | None = None
 
     class Config:
         from_attributes = True

@@ -11,6 +11,10 @@ class Recipe(Base):
     name = Column(String, nullable=False)
     description = Column(String, nullable=True)
     servings = Column(Float, nullable=False, default=1)
+    calories = Column(Float, nullable=True)
+    protein = Column(Float, nullable=True)
+    carbs = Column(Float, nullable=True)
+    fat = Column(Float, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     ingredients = relationship("RecipeIngredient", back_populates="recipe", cascade="all, delete-orphan")
 

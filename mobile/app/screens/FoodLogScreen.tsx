@@ -4,6 +4,8 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
 
+type NutritionSummary = { id: number; name: string; calories: number | null; protein: number | null; carbs: number | null; fat: number | null };
+
 type FoodLogEntry = {
   id: number;
   meal_type: string;
@@ -12,7 +14,9 @@ type FoodLogEntry = {
   date: string;
   food_id: number | null;
   recipe_id: number | null;
-  food: { id: number; name: string; calories: number | null; protein: number | null; carbs: number | null; fat: number | null } | null;};
+  food: NutritionSummary | null;
+  recipe: (NutritionSummary & { servings: number }) | null;
+};
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
@@ -60,17 +64,19 @@ export default function FoodLogScreen() {
   function dailyTotals() {
     let calories = 0, protein = 0, carbs = 0, fat = 0;
     for (const log of logs) {
-      const scale = log.quantity / 100;
-      calories += log.food?.calories ? log.food.calories * scale : 0;
-      protein += log.food?.protein ? log.food.protein * scale : 0;
-      carbs += log.food?.carbs ? log.food.carbs * scale : 0;
-      fat += log.food?.fat ? log.food.fat * scale : 0;
+      const isRecipe = !!log.recipe_id;
+      const scale = isRecipe ? log.quantity / (log.recipe?.servings ?? 1) : log.quantity / 100;
+      const source = isRecipe ? log.recipe : log.food;
+      calories += source?.calories ? source.calories * scale : 0;
+      protein  += source?.protein  ? source.protein  * scale : 0;
+      carbs    += source?.carbs    ? source.carbs    * scale : 0;
+      fat      += source?.fat      ? source.fat      * scale : 0;
     }
     return {
       calories: Math.round(calories),
-      protein: Math.round(protein),
-      carbs: Math.round(carbs),
-      fat: Math.round(fat),
+      protein:  Math.round(protein),
+      carbs:    Math.round(carbs),
+      fat:      Math.round(fat),
     };
   }
 
@@ -109,17 +115,20 @@ export default function FoodLogScreen() {
             </TouchableOpacity>
           </View>
           {logsForMeal(mealType).map(log => {
-              const scale = log.quantity / 100;
-              const cals = log.food?.calories ? Math.round(log.food.calories * scale) : null;
-              const protein = log.food?.protein ? Math.round(log.food.protein * scale) : null;
-              const carbs = log.food?.carbs ? Math.round(log.food.carbs * scale) : null;
-              const fat = log.food?.fat ? Math.round(log.food.fat * scale) : null;
+              const isRecipe = !!log.recipe_id;
+              const name = isRecipe ? log.recipe?.name : log.food?.name;
+              const scale = isRecipe ? log.quantity / (log.recipe?.servings ?? 1) : log.quantity / 100;
+              const source = isRecipe ? log.recipe : log.food;
+              const cals    = source?.calories != null ? Math.round(source.calories * scale) : null;
+              const protein = source?.protein  != null ? Math.round(source.protein  * scale) : null;
+              const carbs   = source?.carbs    != null ? Math.round(source.carbs    * scale) : null;
+              const fat     = source?.fat      != null ? Math.round(source.fat      * scale) : null;
 
               return (
                   <View key={log.id} style={styles.logItem}>
                       <View style={styles.logRow}>
                           <View style={styles.logInfo}>
-                              <Text style={styles.logName}>{log.food?.name ?? 'Unknown food'}</Text>
+                              <Text style={styles.logName}>{name ?? 'Unknown'}</Text>
                               <Text style={styles.logDetail}>{log.quantity}{log.unit} · {cals ?? '?'} kcal</Text>
                               <Text style={styles.logDetail}>P: {protein ?? '?'}g · C: {carbs ?? '?'}g · F: {fat ?? '?'}g</Text>
                           </View>

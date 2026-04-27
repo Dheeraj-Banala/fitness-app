@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.recipe import Recipe, RecipeIngredient
+from ..models.food import Food
 from ..schemas.recipe import RecipeCreate, RecipeResponse
 from ..auth import get_current_user
 
@@ -13,8 +14,23 @@ def post_recipe(log: RecipeCreate, current_user = Depends(get_current_user), db:
     db.add(db_log)
     db.commit()
     db.refresh(db_log)
+
+    calories = protein = carbs = fat = 0.0
     for ingredient in log.ingredients:
         db.add(RecipeIngredient(**ingredient.model_dump(), recipe_id=db_log.id))
+        food = db.query(Food).filter(Food.id == ingredient.food_id).first()
+        if food:
+            scale = ingredient.quantity / 100
+            calories += (food.calories or 0) * scale
+            protein  += (food.protein  or 0) * scale
+            carbs    += (food.carbs    or 0) * scale
+            fat      += (food.fat      or 0) * scale
+
+    db_log.calories = round(calories, 1)
+    db_log.protein  = round(protein,  1)
+    db_log.carbs    = round(carbs,    1)
+    db_log.fat      = round(fat,      1)
+
     db.commit()
     db.refresh(db_log)
     return db_log
