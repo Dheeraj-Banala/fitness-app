@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, StyleSheet, Alert, TouchableOpacity } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
 import { searchFoods, FoodSearchResult } from '../services/foodSearch'
@@ -9,7 +9,7 @@ export default function AddFoodScreen() {
   const { token } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
-  const { mealType, date } = route.params as { mealType: string; date: string };
+  const { mealType, date, barcode } = route.params as { mealType: string; date: string; barcode?: string };
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<FoodSearchResult[]>([]);
@@ -18,7 +18,7 @@ export default function AddFoodScreen() {
   const [mode, setMode] = useState<'food' | 'recipe'>('food');
   const [recipes, setRecipes] = useState<{id: number; name: string; servings: number; calories: number | null; protein: number | null; carbs: number | null; fat: number | null}[]>([]);
   const [selectedRecipe, setSelectedRecipe] = useState<{id: number; name: string; servings: number; calories: number | null; protein: number | null; carbs: number | null; fat: number | null} | null>(null);
-  
+
   async function handleSearch() {
     if (!query) return;
     try {
@@ -38,6 +38,22 @@ export default function AddFoodScreen() {
 
   async function handleLog(food: FoodSearchResult) {
     setSelectedFood(food);
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      const code = (route.params as any)?.barcode;
+      if (code) handleBarcodeResult(code);
+    }, [route.params])
+  );
+
+  async function handleBarcodeResult(code: string) {
+    try {
+      const data = await apiFetch(`/foods/barcode/${code}`, token);
+      setSelectedFood({ ...data, id: null, is_local: false, data_type: null, external_id: null });
+    } catch (e) {
+      Alert.alert('Not found', 'No food found for that barcode');
+    }
   }
 
   async function handleConfirmLog() {
@@ -64,7 +80,11 @@ export default function AddFoodScreen() {
         }),
       });
 
-      navigation.goBack();
+      if (barcode) {
+        (navigation as any).navigate('FoodLog');
+      } else {
+        navigation.goBack();
+      }
     } catch (e) {
       Alert.alert('Error', 'Could not log food');
     }
@@ -88,6 +108,8 @@ export default function AddFoodScreen() {
       Alert.alert('Error', 'Could not log recipe');
     }
   }
+
+  
 
   return (
     <View style={styles.container}>
@@ -151,6 +173,11 @@ export default function AddFoodScreen() {
                 <Text style={styles.searchButtonText}>Search</Text>
               </TouchableOpacity>
             </View>
+            <TouchableOpacity
+              style={styles.scanButton}
+              onPress={() => (navigation as any).navigate('Barcode', { mealType, date })}>
+              <Text style={styles.scanButtonText}>Scan Barcode</Text>
+            </TouchableOpacity>
             <FlatList
               data={results}
               keyExtractor={(_, index) => index.toString()}
@@ -242,4 +269,6 @@ const styles = StyleSheet.create({
   macroCalories: { fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
   macroRow: { flexDirection: 'row', gap: 16 },
   macroItem: { fontSize: 14, color: '#555' },
+  scanButton: { backgroundColor: '#f0f0f0', borderRadius: 8, padding: 12, alignItems: 'center', marginBottom: 12 },
+  scanButtonText: { fontSize: 15, fontWeight: '600', color: '#333' },
 });

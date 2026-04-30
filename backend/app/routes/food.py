@@ -46,3 +46,11 @@ def delete_food(food_id: int, current_user = Depends(get_current_user), db: Sess
         db.delete(db_response)
         db.commit()
     return {"message": "deleted"}
+
+@router.get("/barcode/{barcode}")
+def lookup_food_by_barcode(barcode: str):
+    from ..services.food_api import lookup_barcode
+    result = lookup_barcode(barcode)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Barcode not found")
+    return result

@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import FoodLogScreen from "../screens/FoodLogScreen";
 import AddFoodScreen from '../screens/AddFoodScreen';
 import MicronutrientsScreen from '../screens/MicronutrientsScreen';
+import BarcodeScannerScreen from "../screens/BarcodeScannerScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -12,6 +13,7 @@ export default function FoodLogStack() {
             <Stack.Screen name="FoodLog" component={FoodLogScreen} />
             <Stack.Screen name="AddFood" component={AddFoodScreen} />
             <Stack.Screen name="Micronutrients" component={MicronutrientsScreen} options={{ title: 'Micronutrients' }} />
+            <Stack.Screen name="Barcode" component={BarcodeScannerScreen} />
         </Stack.Navigator>
     );
 }

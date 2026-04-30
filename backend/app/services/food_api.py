@@ -9,6 +9,31 @@ headers = {
     "Accept": "application/json"
 }
 
+def _g_to_mg(value):
+    return round(value * 1000, 2) if value is not None else None
+
+def _off_nutrients(nutriments: dict) -> dict:
+    return {
+        "calories": nutriments.get("energy-kcal_100g"),
+        "protein": nutriments.get("proteins_100g"),
+        "carbs": nutriments.get("carbohydrates_100g"),
+        "fat": nutriments.get("fat_100g"),
+        "fiber": nutriments.get("fiber_100g"),
+        "sugar": nutriments.get("sugars_100g"),
+        "saturated_fat": nutriments.get("saturated-fat_100g"),
+        "sodium": _g_to_mg(nutriments.get("sodium_100g")),
+        "potassium": _g_to_mg(nutriments.get("potassium_100g")),
+        "calcium": _g_to_mg(nutriments.get("calcium_100g")),
+        "magnesium": _g_to_mg(nutriments.get("magnesium_100g")),
+        "iron": _g_to_mg(nutriments.get("iron_100g")),
+        "zinc": _g_to_mg(nutriments.get("zinc_100g")),
+        "vitamin_d": None,
+        "vitamin_c": None,
+        "vitamin_a": None,
+        "vitamin_b12": None,
+        "folate": None,
+    }
+
 def search_open_food_facts(query: str) -> list[dict]:
     params = {
         "search_terms": query,
@@ -24,7 +49,6 @@ def search_open_food_facts(query: str) -> list[dict]:
 
     results = []
     for product in data.get("products", []):
-        nutriments = product.get("nutriments", {})
         name = product.get("product_name", "").strip()
         if not name:
             continue
@@ -33,16 +57,33 @@ def search_open_food_facts(query: str) -> list[dict]:
             "source": "open_food_facts",
             "serving_size": 100,
             "serving_unit": "g",
-            "calories": nutriments.get("energy-kcal_100g"),
-            "protein": nutriments.get("proteins_100g"),
-            "carbs": nutriments.get("carbohydrates_100g"),
-            "fat": nutriments.get("fat_100g"),
-            "fiber": nutriments.get("fiber_100g"),
-            "sugar": nutriments.get("sugars_100g"),
-            "saturated_fat": nutriments.get("saturated-fat_100g"),
-            "sodium": nutriments.get("sodium_100g"),
+            **_off_nutrients(product.get("nutriments", {})),
         })
     return results
+
+def lookup_barcode(barcode: str) -> dict | None:
+    url = f"https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
+
+    with httpx.Client() as client:
+        response = client.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+    if data.get("status") != 1:
+        return None
+
+    product = data.get("product", {})
+    name = product.get("product_name", "").strip()
+    if not name:
+        return None
+
+    return {
+        "name": name,
+        "source": "open_food_facts",
+        "serving_size": 100,
+        "serving_unit": "g",
+        **_off_nutrients(product.get("nutriments", {})),
+    }
 
 def _pos(value):
     return max(0, value) if value is not None else None
