@@ -65,41 +65,56 @@ export default function GoalsScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Goals</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Calories"
-        value={calories}
-        onChangeText={setCalories}
-        keyboardType="decimal-pad"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Protein"
-        value={protein}
-        onChangeText={setProtein}
-        keyboardType="decimal-pad"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Carbohydrates"
-        value={carbs}
-        onChangeText={setCarbs}
-        keyboardType="decimal-pad"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Fat"
-        value={fat}
-        onChangeText={setFat}
-        keyboardType="decimal-pad"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Water (ml)"
-        value={water}
-        onChangeText={setWater}
-        keyboardType="decimal-pad"
-      />
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Calories (kcal)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Calories"
+          value={calories}
+          onChangeText={setCalories}
+          keyboardType="decimal-pad"
+        />
+      </View>
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Protein (g)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Protein"
+          value={protein}
+          onChangeText={setProtein}
+          keyboardType="decimal-pad"
+        />
+      </View>
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Carbs (g)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Carbohydrates"
+          value={carbs}
+          onChangeText={setCarbs}
+          keyboardType="decimal-pad"
+        />
+      </View>
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Fat (g)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Fat"
+          value={fat}
+          onChangeText={setFat}
+          keyboardType="decimal-pad"
+        />
+      </View>
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Water (ml)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Water (ml)"
+          value={water}
+          onChangeText={setWater}
+          keyboardType="decimal-pad"
+        />
+      </View>
       <Button title="Save" onPress={handleSave} />
     </View>
   );
@@ -108,5 +123,7 @@ export default function GoalsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12 },
+  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
+  fieldGroup: { marginBottom: 12 },
+  label: { fontSize: 14, fontWeight: '500', color: '#333', marginBottom: 4 },
 });

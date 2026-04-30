@@ -63,6 +63,11 @@ def search_usda(query: str) -> list[dict]:
     results = []
     for food in data.get("foods", []):
         nutrients = {n["nutrientName"]: n["value"] for n in food.get("foodNutrients", [])}
+        energy_kcal = next(
+            (n["value"] for n in food.get("foodNutrients", [])
+             if n["nutrientName"] == "Energy" and n.get("unitName", "").upper() == "KCAL"),
+            None
+        ) or nutrients.get("Energy (Atwater General Factors)") or nutrients.get("Energy (Atwater Specific Factors)")
         results.append({
             "name": food.get("description", ""),
             "source": "usda",
@@ -70,7 +75,7 @@ def search_usda(query: str) -> list[dict]:
             "data_type": food.get("dataType"),
             "serving_size": 100,
             "serving_unit": "g",
-            "calories": nutrients.get("Energy") or nutrients.get("Energy (Atwater General Factors)") or nutrients.get("Energy (Atwater Specific Factors)"),
+            "calories": energy_kcal,
             "protein": _pos(nutrients.get("Protein")),
             "carbs": _pos(nutrients.get("Carbohydrate, by difference")),
             "fat": _pos(nutrients.get("Total lipid (fat)")),
@@ -78,5 +83,15 @@ def search_usda(query: str) -> list[dict]:
             "sugar": _pos(nutrients.get("Sugars, total including NLEA")),
             "saturated_fat": _pos(nutrients.get("Fatty acids, total saturated")),
             "sodium": _pos(nutrients.get("Sodium, Na")),
+            "potassium": _pos(nutrients.get("Potassium, K")),
+            "calcium": _pos(nutrients.get("Calcium, Ca")),
+            "magnesium": _pos(nutrients.get("Magnesium, Mg")),
+            "iron": _pos(nutrients.get("Iron, Fe")),
+            "zinc": _pos(nutrients.get("Zinc, Zn")),
+            "vitamin_d": _pos(nutrients.get("Vitamin D (D2 + D3)")),
+            "vitamin_c": _pos(nutrients.get("Vitamin C, total ascorbic acid")),
+            "vitamin_a": _pos(nutrients.get("Vitamin A, RAE")),
+            "vitamin_b12": _pos(nutrients.get("Vitamin B-12")),
+            "folate": _pos(nutrients.get("Folate, DFE")),
         })
     return results

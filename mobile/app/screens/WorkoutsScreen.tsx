@@ -52,11 +52,11 @@ export default function WorkoutsScreen() {
         data={workouts}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item}) => (
-          <View style={styles.workoutItem}>
+          <TouchableOpacity style={styles.workoutItem} onPress={() => navigation.navigate('WorkoutDetail' as never, { workout: item } as never)}>
             <Text style={styles.workoutName}>{item.name ?? 'Workout'}</Text>
             <Text style={styles.workoutDate}>{item.date}</Text>
             <Text style={styles.setCount}>{item.sets.length} sets</Text>
-          </View>
+          </TouchableOpacity>
         )}
       />
     </View>
