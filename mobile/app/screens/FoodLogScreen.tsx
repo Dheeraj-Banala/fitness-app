@@ -170,7 +170,14 @@ export default function FoodLogScreen() {
               const fat     = source?.fat      != null ? Math.round(source.fat      * scale) : null;
 
               return (
-                  <View key={log.id} style={styles.logItem}>
+                    <TouchableOpacity key={log.id} style={styles.logItem} onPress={() => (navigation as any).navigate('LogFood', {
+                      mealType: log.meal_type,
+                      date: log.date,
+                      food: log.food ? { ...log.food, id: log.food_id, is_local: true, data_type: null, external_id: null } : undefined,
+                      recipe: log.recipe ?? undefined,
+                      logId: log.id,
+                      initialQuantity: log.quantity,
+                    })}>
                       <View style={styles.logRow}>
                           <View style={styles.logInfo}>
                               <Text style={styles.logName}>{name ?? 'Unknown'}</Text>
@@ -181,7 +188,7 @@ export default function FoodLogScreen() {
                               <Text style={styles.deleteButton}>✕</Text>
                           </TouchableOpacity>
                       </View>
-                  </View>
+                  </TouchableOpacity>
               );
           })}
         </View>
