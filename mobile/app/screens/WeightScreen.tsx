@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { useAuth } from "../context/AuthContext";
+import { usePreferences } from "../context/PreferencesContext";
 import { apiFetch } from "../services/api";
+import { kgToLbs, lbsToKg } from "../utils/units";
 
 type WeightLog = {
   id: number;
@@ -19,6 +21,7 @@ function toLocalDateString(d: Date): string {
 
 export default function WeightScreen() {
   const { token } = useAuth();
+  const { weightUnit } = usePreferences();
   const [logs, setLogs] = useState<WeightLog[]>([]);
   const [weight, setWeight] = useState('');
   const [notes, setNotes] = useState('');
@@ -40,10 +43,11 @@ export default function WeightScreen() {
   async function handleAdd() {
     if (!weight) return;
     try {
+      const weightKg = weightUnit === 'lbs' ? lbsToKg(parseFloat(weight)) : parseFloat(weight);
       await apiFetch('/weight-logs/', token, {
         method: 'POST',
         body: JSON.stringify({
-          weight_kg: parseFloat(weight),
+          weight_kg: weightKg,
           date: toLocalDateString(new Date()),
           notes: notes || null,
         }),
@@ -68,16 +72,17 @@ export default function WeightScreen() {
 
   const latestLog = sorted.length > 0 ? sorted[sorted.length - 1] : null;
 
-  const weights = filtered.map(l => l.weight_kg);
+  const displayWeight = (kg: number) => weightUnit === 'lbs' ? kgToLbs(kg) : Math.round(kg * 10) / 10;
+
+  const weights = filtered.map(l => displayWeight(l.weight_kg));
   const minWeight = weights.length > 0 ? Math.min(...weights) : 0;
   const maxWeight = weights.length > 0 ? Math.max(...weights) : 1;
   const yPadding = Math.max((maxWeight - minWeight) * 0.2, 0.5);
 
-  // Only label every Nth point to avoid crowding
   const labelEvery = filtered.length > 30 ? 7 : filtered.length > 10 ? 3 : 1;
 
   const chartData = filtered.map((l, i) => ({
-    value: l.weight_kg,
+    value: displayWeight(l.weight_kg),
     label: i % labelEvery === 0 ? l.date.slice(5) : '',
     dataPointText: '',
   }));
@@ -88,7 +93,7 @@ export default function WeightScreen() {
 
       {latestLog && (
         <View style={styles.card}>
-          <Text style={styles.currentWeight}>{latestLog.weight_kg} kg</Text>
+          <Text style={styles.currentWeight}>{displayWeight(latestLog.weight_kg)} {weightUnit}</Text>
           <Text style={styles.currentDate}>as of {latestLog.date}</Text>
         </View>
       )}
@@ -138,7 +143,7 @@ export default function WeightScreen() {
       <View style={styles.inputRow}>
         <TextInput
           style={styles.input}
-          placeholder="Weight (kg)"
+          placeholder={`Weight (${weightUnit})`}
           value={weight}
           onChangeText={setWeight}
           keyboardType="decimal-pad"
@@ -158,7 +163,7 @@ export default function WeightScreen() {
         style={styles.logList}
         renderItem={({ item }) => (
           <View style={styles.logItem}>
-            <Text style={styles.logWeight}>{item.weight_kg} kg</Text>
+            <Text style={styles.logWeight}>{displayWeight(item.weight_kg)} {weightUnit}</Text>
             <Text style={styles.logDate}>{item.date}</Text>
             {item.notes && <Text style={styles.logNotes}>{item.notes}</Text>}
           </View>

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from ..database import get_db
 from ..models.user import User
 from ..models.refresh_token import RefreshToken
-from ..schemas.user import UserCreate, UserResponse, UserLogin, RefreshRequest
+from ..schemas.user import UserCreate, UserResponse, UserLogin, RefreshRequest, UserUpdate
 from ..auth import hash_password, verify_password, create_access_token, get_current_user, create_refresh_token, REFRESH_TOKEN_EXPIRE_DAYS
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -46,6 +46,14 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@router.patch("/me", response_model=UserResponse)
+def update_me(update: UserUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    for field, value in update.model_dump(exclude_none=True).items():
+        setattr(current_user, field, value)
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 @router.post("/refresh")

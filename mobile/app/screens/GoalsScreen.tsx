@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert, Keyboard } from 'react-native';
 import { useAuth } from "../context/AuthContext";
+import { usePreferences } from "../context/PreferencesContext";
 import { apiFetch } from "../services/api";
+import { mlToOz, ozToMl } from "../utils/units";
 
 type Goals = {
   calories: number | null;
@@ -13,6 +15,7 @@ type Goals = {
 
 export default function GoalsScreen() {
   const { token } = useAuth();
+  const { volumeUnit } = usePreferences();
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -20,9 +23,7 @@ export default function GoalsScreen() {
   const [water, setWater] = useState('');
   const [goalsExist, setGoalsExist] = useState(false);
 
-  useEffect(() => {
-    loadGoals();
-  }, []);
+  useEffect(() => { loadGoals(); }, [volumeUnit]);
 
   async function loadGoals() {
     try {
@@ -31,7 +32,7 @@ export default function GoalsScreen() {
       setProtein(data.protein_g?.toString() ?? '')
       setCarbs(data.carbs_g?.toString() ?? '')
       setFat(data.fat_g?.toString() ?? '')
-      setWater(data.water_ml?.toString() ?? '')
+      setWater(data.water_ml != null ? (volumeUnit === 'oz' ? mlToOz(data.water_ml) : data.water_ml).toString() : '');
       setGoalsExist(true)
     } catch (e) {
       // 404 means no goals set yet, which is fine
@@ -52,7 +53,7 @@ export default function GoalsScreen() {
           protein_g: parseFloat(protein) || null,
           carbs_g: parseFloat(carbs) || null,
           fat_g: parseFloat(fat) || null,
-          water_ml: parseFloat(water) || null,
+          water_ml: water ? (volumeUnit === 'oz' ? ozToMl(parseFloat(water)) : parseFloat(water)) : null,
         }),
       });
       loadGoals();
@@ -106,10 +107,10 @@ export default function GoalsScreen() {
         />
       </View>
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>Water (ml)</Text>
+        <Text style={styles.label}>Water ({volumeUnit})</Text>
         <TextInput
           style={styles.input}
-          placeholder="Water (ml)"
+          placeholder={`Water (${volumeUnit})`}
           value={water}
           onChangeText={setWater}
           keyboardType="decimal-pad"

@@ -1,7 +1,26 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert, ScrollView } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
+import Animated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import { useAuth } from "../context/AuthContext";
+import { usePreferences } from "../context/PreferencesContext";
 import { apiFetch } from "../services/api";
+import { mlToOz, ozToMl } from "../utils/units";
+
+const DELETE_WIDTH = 80;
+
+function DeleteAction({ drag, onDelete }: { drag: SharedValue<number>; onDelete: () => void }) {
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: drag.value + DELETE_WIDTH }],
+  }));
+  return (
+    <Animated.View style={[styles.swipeDelete, animStyle]}>
+      <TouchableOpacity onPress={onDelete} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={styles.swipeDeleteText}>Delete</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
 
 const HISTORY_DAYS = 90;
 const VISIBLE_DAYS = 7;
@@ -19,6 +38,7 @@ function toLocalDateString(d: Date): string {
 
 export default function WaterScreen() {
   const { token } = useAuth();
+  const { volumeUnit } = usePreferences();
   const [logs, setLogs] = useState<WaterLog[]>([]);
   const [amount, setAmount] = useState('');
   const [goalWater, setGoalWater] = useState<number | null>(null);
@@ -66,13 +86,21 @@ export default function WaterScreen() {
     return days;
   }
 
+  async function handleDelete(logId: number) {
+    try {
+      await apiFetch(`/water-logs/${logId}`, token, { method: 'DELETE' });
+      loadLogs();
+    } catch (e) {}
+  }
+
   async function handleAdd() {
     if (!amount) return;
     try {
+      const amountMl = volumeUnit === 'oz' ? ozToMl(parseFloat(amount)) : parseFloat(amount);
       await apiFetch('/water-logs/', token, {
         method: 'POST',
         body: JSON.stringify({
-          amount_ml: parseFloat(amount),
+          amount_ml: amountMl,
           date: toLocalDateString(new Date()),
         }),
       });
@@ -87,6 +115,9 @@ export default function WaterScreen() {
   const today = toLocalDateString(new Date());
   const barWidth = chartWidth > 0 ? chartWidth / VISIBLE_DAYS : 0;
   const chartHeight = 100;
+
+  const displayVol = (ml: number) => volumeUnit === 'oz' ? mlToOz(ml) : Math.round(ml);
+  const displayGoal = goalWater != null ? displayVol(goalWater) : null;
 
   const total = todayTotal();
   const ratio = goalWater ? Math.min(total / goalWater, 1) : 0;
@@ -116,7 +147,7 @@ export default function WaterScreen() {
       <View style={styles.card}>
         <View style={styles.progressLabelRow}>
           <Text style={styles.progressLabel}>Today</Text>
-          <Text style={styles.progressValue}>{total} / {goalWater ?? '—'} ml</Text>
+          <Text style={styles.progressValue}>{displayVol(total)} / {displayGoal ?? '—'} {volumeUnit}</Text>
         </View>
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
@@ -159,7 +190,7 @@ export default function WaterScreen() {
       <View style={styles.inputRow}>
         <TextInput
           style={styles.input}
-          placeholder="Amount (ml)"
+          placeholder={`Amount (${volumeUnit})`}
           value={amount}
           onChangeText={setAmount}
           keyboardType="decimal-pad"
@@ -171,10 +202,21 @@ export default function WaterScreen() {
         data={todayLogs}
         keyExtractor={item => item.id.toString()}
         renderItem={({ item }) => (
-          <View style={styles.logItem}>
-            <Text style={styles.logAmount}>{item.amount_ml} ml</Text>
-            <Text style={styles.logDate}>{new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-          </View>
+          <Swipeable
+            overshootRight={false}
+            renderRightActions={(_, drag) => (
+              <DeleteAction drag={drag} onDelete={() => handleDelete(item.id)} />
+            )}
+          >
+            <View style={styles.logItem}>
+              <View style={styles.logRow}>
+                <View>
+                  <Text style={styles.logAmount}>{displayVol(item.amount_ml)} {volumeUnit}</Text>
+                  <Text style={styles.logDate}>{new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                </View>
+              </View>
+            </View>
+          </Swipeable>
         )}
         style={styles.logList}
       />
@@ -199,6 +241,10 @@ const styles = StyleSheet.create({
   input: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
   logList: { flex: 1 },
   logItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  logRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   logAmount: { fontSize: 18, fontWeight: '600' },
   logDate: { color: '#666', marginTop: 4 },
+  deleteButton: { color: '#FF3B30', fontSize: 16, paddingLeft: 12 },
+  swipeDelete: { backgroundColor: '#FF3B30', justifyContent: 'center', alignItems: 'center', width: DELETE_WIDTH },
+  swipeDeleteText: { color: 'white', fontWeight: '600', fontSize: 15 },
 });

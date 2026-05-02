@@ -12,5 +12,8 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     hashed_password = Column(String, nullable=False)
     height_cm = Column(Float, nullable=True)
+    weight_unit = Column(String, nullable=False, default='lbs')
+    volume_unit = Column(String, nullable=False, default='oz')
+    height_unit = Column(String, nullable=False, default='ft_in')
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
