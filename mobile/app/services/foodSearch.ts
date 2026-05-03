@@ -25,6 +25,8 @@ export type FoodSearchResult = {
   external_id: string | null;
   serving_size: number;
   serving_unit: string;
+  default_serving_g: number | null;
+  default_serving_name: string | null;
   data_type: string | null;
   is_local: boolean;
 };
@@ -58,6 +60,8 @@ export async function searchFoods(query: string, token: string | null): Promise<
         external_id: f.external_id,
         serving_size: f.serving_size,
         serving_unit: f.serving_unit,
+        default_serving_g: f.default_serving_g ?? null,
+        default_serving_name: f.default_serving_name ?? null,
         data_type: null,
         is_local: true,
       }))
@@ -80,6 +84,8 @@ export async function searchFoods(query: string, token: string | null): Promise<
           external_id: f.external_id,
           serving_size: f.serving_size,
           serving_unit: f.serving_unit,
+          default_serving_g: f.default_serving_g ?? null,
+          default_serving_name: f.default_serving_name ?? null,
           data_type: f.data_type,
           is_local: false,
         }))

@@ -12,6 +12,8 @@ class Food(Base):
 
     serving_size = Column(Float, nullable=False)
     serving_unit = Column(String, nullable=False)
+    default_serving_g = Column(Float, nullable=True)
+    default_serving_name = Column(String, nullable=True)
 
     #Macros
     calories = Column(Float, nullable=False)

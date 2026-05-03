@@ -55,11 +55,10 @@ export default function RecipeDetailScreen() {
     if (!recipe) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
     let calories = 0, protein = 0, carbs = 0, fat = 0;
     for (const ing of recipe.ingredients) {
-      const scale = ing.quantity / 100;
-      calories += (ing.food?.calories ?? 0) * scale;
-      protein  += (ing.food?.protein  ?? 0) * scale;
-      carbs    += (ing.food?.carbs    ?? 0) * scale;
-      fat      += (ing.food?.fat      ?? 0) * scale;
+      calories += (ing.food?.calories ?? 0) * ing.quantity;
+      protein  += (ing.food?.protein  ?? 0) * ing.quantity;
+      carbs    += (ing.food?.carbs    ?? 0) * ing.quantity;
+      fat      += (ing.food?.fat      ?? 0) * ing.quantity;
     }
     return {
       calories: Math.round(calories),
@@ -96,8 +95,7 @@ export default function RecipeDetailScreen() {
 
       <Text style={styles.sectionTitle}>Ingredients</Text>
       {recipe.ingredients.map((ing) => {
-        const scale = ing.quantity / 100;
-        const cals = Math.round((ing.food?.calories ?? 0) * scale);
+        const cals = Math.round((ing.food?.calories ?? 0) * ing.quantity);
         return (
           <View key={ing.id} style={styles.ingredientItem}>
             <View style={styles.ingredientRow}>

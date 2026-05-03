@@ -30,16 +30,38 @@ export default function LogFoodScreen() {
   const route = useRoute();
   const { mealType, date, food, recipe, logId, initialQuantity } = route.params as Params;
 
-  const [quantity, setQuantity] = useState(initialQuantity ? String(initialQuantity) : '');
-
   const isEditing = !!logId;
   const isRecipe = !!recipe;
   const name = food?.name ?? recipe?.name ?? '';
-  const servingUnit = food?.serving_unit ?? 'g';
+
+  const availableUnits: string[] = isRecipe
+    ? ['serving']
+    : food?.default_serving_name
+      ? [food.default_serving_name, 'g', 'oz']
+      : food?.default_serving_g != null
+        ? ['serving', 'g', 'oz']
+        : ['g', 'oz'];
+
+  function unitLabel(unit: string): string {
+    if (unit === 'serving' && !food?.default_serving_name && food?.default_serving_g != null) {
+      return `serving (${food.default_serving_g}g)`;
+    }
+    return unit;
+  }
+
+  const [selectedUnit, setSelectedUnit] = useState(availableUnits[0]);
+  const [quantity, setQuantity] = useState(initialQuantity ? String(initialQuantity) : '');
+
+  function getScale(qty: number): number {
+    if (isRecipe) return qty / (recipe!.servings);
+    if (selectedUnit === 'g') return qty;
+    if (selectedUnit === 'oz') return qty * 28.3495;
+    return qty * (food!.default_serving_g ?? 1);
+  }
 
   function macroPreview() {
     const qty = parseFloat(quantity) || 0;
-    const scale = isRecipe ? qty / (recipe!.servings) : qty / 100;
+    const scale = getScale(qty);
     const source = isRecipe ? recipe! : food!;
     return {
       calories: source.calories != null ? Math.round(source.calories * scale) : null,
@@ -47,6 +69,11 @@ export default function LogFoodScreen() {
       carbs:    source.carbs    != null ? Math.round(source.carbs    * scale) : null,
       fat:      source.fat      != null ? Math.round(source.fat      * scale) : null,
     };
+  }
+
+  function handleUnitChange(unit: string) {
+    setSelectedUnit(unit);
+    setQuantity('');
   }
 
   async function handleConfirm() {
@@ -83,7 +110,7 @@ export default function LogFoodScreen() {
             food_id: foodId,
             meal_type: mealType,
             quantity: parseFloat(quantity),
-            unit: food!.serving_unit,
+            unit: selectedUnit,
             date,
           }),
         });
@@ -99,13 +126,32 @@ export default function LogFoodScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.name}>{name}</Text>
-      <Text style={styles.subtitle}>
-        {isRecipe ? `per serving (${recipe!.servings} servings total)` : `per 100 ${servingUnit}`}
-      </Text>
+      {isRecipe && (
+        <Text style={styles.subtitle}>per serving ({recipe!.servings} servings total)</Text>
+      )}
+
+      {!isRecipe && !isEditing && (
+        <View style={styles.unitPicker}>
+          {availableUnits.map(unit => (
+            <TouchableOpacity
+              key={unit}
+              style={[styles.unitOption, selectedUnit === unit && styles.unitOptionActive]}
+              onPress={() => handleUnitChange(unit)}>
+              <Text style={[styles.unitOptionText, selectedUnit === unit && styles.unitOptionTextActive]}>
+                {unitLabel(unit)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {!isRecipe && food?.default_serving_name && selectedUnit === food.default_serving_name && (
+        <Text style={styles.servingHint}>({food.default_serving_g}g each)</Text>
+      )}
 
       <TextInput
         style={styles.input}
-        placeholder={isRecipe ? 'Servings' : `Quantity (${servingUnit})`}
+        placeholder={isRecipe ? 'Servings' : `Quantity (${selectedUnit})`}
         value={quantity}
         onChangeText={setQuantity}
         keyboardType="decimal-pad"
@@ -125,6 +171,18 @@ export default function LogFoodScreen() {
         <Text style={styles.confirmButtonText}>{isEditing ? 'Update' : 'Log Food'}</Text>
       </TouchableOpacity>
 
+      {food?.is_local && food.id != null && (
+        <TouchableOpacity style={styles.editButton} onPress={() => (navigation as any).navigate('EditFood', { foodId: food.id })}>
+          <Text style={styles.editButtonText}>Edit Food</Text>
+        </TouchableOpacity>
+      )}
+
+      {isRecipe && recipe?.id != null && (
+        <TouchableOpacity style={styles.editButton} onPress={() => (navigation as any).navigate('EditRecipe', { recipeId: recipe.id })}>
+          <Text style={styles.editButtonText}>Edit Recipe</Text>
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity onPress={() => navigation.goBack()}>
         <Text style={styles.cancelText}>Cancel</Text>
       </TouchableOpacity>
@@ -141,7 +199,15 @@ const styles = StyleSheet.create({
   macroCals: { fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
   macroRow: { flexDirection: 'row', gap: 20 },
   macroItem: { fontSize: 15, color: '#555' },
+  unitPicker: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  unitOption: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: '#ccc', backgroundColor: '#f5f5f5' },
+  unitOptionActive: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
+  unitOptionText: { fontSize: 14, fontWeight: '500', color: '#555' },
+  unitOptionTextActive: { color: 'white' },
+  servingHint: { fontSize: 12, color: '#888', marginBottom: 8 },
   confirmButton: { backgroundColor: '#34C759', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 12 },
   confirmButtonText: { color: 'white', fontWeight: '600', fontSize: 16 },
+  editButton: { borderWidth: 1, borderColor: '#007AFF', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 12 },
+  editButtonText: { color: '#007AFF', fontWeight: '600', fontSize: 16 },
   cancelText: { color: '#FF3B30', textAlign: 'center', padding: 8 },
 });

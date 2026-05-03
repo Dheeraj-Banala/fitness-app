@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
+from typing import Any
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.food import Food
@@ -17,8 +18,15 @@ def post_food(log: FoodCreate, current_user = Depends(get_current_user), db: Ses
     return db_log
 
 @router.get("/", response_model=list[FoodResponse])
-def get_foods(search: str | None = None, db: Session = Depends(get_db)):
-    query = db.query(Food)
+def get_foods(search: str | None = None, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    query = db.query(Food).filter(Food.is_public == True)
+    if search:
+        query = query.filter(Food.name.ilike(f"%{search}%"))
+    return query.all()
+
+@router.get("/mine", response_model=list[FoodResponse])
+def get_my_foods(search: str | None = None, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    query = db.query(Food).filter(Food.user_id == current_user.id, Food.source == 'user')
     if search:
         query = query.filter(Food.name.ilike(f"%{search}%"))
     return query.all()
@@ -29,6 +37,18 @@ def search_external_foods(query: str, current_user = Depends(get_current_user)):
         return search_usda(query)
     except Exception:
         return search_open_food_facts(query)
+
+@router.patch("/{food_id}", response_model=FoodResponse)
+def update_food(food_id: int, updates: dict[str, Any] = Body(...), current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    food = db.query(Food).filter(Food.id == food_id, Food.user_id == current_user.id).first()
+    if food is None:
+        raise HTTPException(status_code=404, detail="Food not found")
+    for key, value in updates.items():
+        if hasattr(food, key):
+            setattr(food, key, value)
+    db.commit()
+    db.refresh(food)
+    return food
 
 @router.get("/{food_id}", response_model=FoodResponse)
 def get_food_by_id(food_id: int, db: Session = Depends(get_db)):

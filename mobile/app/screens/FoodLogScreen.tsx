@@ -10,7 +10,21 @@ type NutritionSummary = {
   sodium: number | null; potassium: number | null; calcium: number | null; magnesium: number | null;
   iron: number | null; zinc: number | null; vitamin_d: number | null; vitamin_c: number | null;
   vitamin_a: number | null; vitamin_b12: number | null; folate: number | null;
+  default_serving_g: number | null;
+  default_serving_name: string | null;
 };
+
+function scaleFood(qty: number, unit: string, defaultServingG: number | null): number {
+  if (unit === 'g') return qty;
+  if (unit === 'oz') return qty * 28.3495;
+  return qty * (defaultServingG ?? 1);
+}
+
+function displayUnit(qty: number, unit: string): string {
+  if (unit === 'g' || unit === 'oz') return unit;
+  if (qty !== 1 && !unit.endsWith('s')) return unit + 's';
+  return unit;
+}
 
 type FoodLogEntry = {
   id: number;
@@ -84,7 +98,9 @@ export default function FoodLogScreen() {
     };
     for (const log of logs) {
       const isRecipe = !!log.recipe_id;
-      const scale = isRecipe ? log.quantity / (log.recipe?.servings ?? 1) : log.quantity / 100;
+      const scale = isRecipe
+        ? log.quantity / (log.recipe?.servings ?? 1)
+        : scaleFood(log.quantity, log.unit, log.food?.default_serving_g ?? null);
       const source = isRecipe ? log.recipe : log.food;
       calories += source?.calories ? source.calories * scale : 0;
       protein  += source?.protein  ? source.protein  * scale : 0;
@@ -162,7 +178,9 @@ export default function FoodLogScreen() {
           {logsForMeal(mealType).map(log => {
               const isRecipe = !!log.recipe_id;
               const name = isRecipe ? log.recipe?.name : log.food?.name;
-              const scale = isRecipe ? log.quantity / (log.recipe?.servings ?? 1) : log.quantity / 100;
+              const scale = isRecipe
+                ? log.quantity / (log.recipe?.servings ?? 1)
+                : scaleFood(log.quantity, log.unit, log.food?.default_serving_g ?? null);
               const source = isRecipe ? log.recipe : log.food;
               const cals    = source?.calories != null ? Math.round(source.calories * scale) : null;
               const protein = source?.protein  != null ? Math.round(source.protein  * scale) : null;
@@ -181,7 +199,7 @@ export default function FoodLogScreen() {
                       <View style={styles.logRow}>
                           <View style={styles.logInfo}>
                               <Text style={styles.logName}>{name ?? 'Unknown'}</Text>
-                              <Text style={styles.logDetail}>{log.quantity}{log.unit} · {cals ?? '?'} kcal</Text>
+                              <Text style={styles.logDetail}>{log.quantity} {displayUnit(log.quantity, log.unit)} · {cals ?? '?'} kcal</Text>
                               <Text style={styles.logDetail}>P: {protein ?? '?'}g · C: {carbs ?? '?'}g · F: {fat ?? '?'}g</Text>
                           </View>
                           <TouchableOpacity onPress={() => handleDelete(log.id)}>

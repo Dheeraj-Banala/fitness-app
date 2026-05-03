@@ -12,6 +12,8 @@ class FoodLogBase(BaseModel):
 class FoodSummary(BaseModel):
     id: int
     name: str
+    default_serving_g: float | None = None
+    default_serving_name: str | None = None
     calories: float | None = None
     protein: float | None = None
     carbs: float | None = None

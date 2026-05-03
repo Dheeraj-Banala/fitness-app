@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from .database import Base, engine
-from .models import user, food, recipe, food_log, workout, water_log, weight_log, user_goals, refresh_token
+from .models import user, food, recipe, food_log, workout, water_log, weight_log, user_goals, refresh_token, exercise
 from .routes import weight_log as weight_log_router
 from .routes import water_log as water_log_router
 from .routes import food_log as food_log_router
@@ -9,6 +9,7 @@ from .routes import food as food_router
 from .routes import recipe as recipe_router
 from .routes import user as user_router
 from .routes import user_goals as user_goals_router
+from .routes import exercise as exercise_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -22,6 +23,7 @@ app.include_router(food_router.router)
 app.include_router(recipe_router.router)
 app.include_router(user_router.router)
 app.include_router(user_goals_router.router)
+app.include_router(exercise_router.router)
 
 @app.get("/health")
 def health_check():

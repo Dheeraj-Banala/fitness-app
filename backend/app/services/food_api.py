@@ -1,5 +1,6 @@
 import httpx
 import os
+import re
 
 OPEN_FOOD_FACTS_URL = "https://world.openfoodfacts.org/api/v2/search"
 USDA_URL = "https://api.nal.usda.gov/fdc/v1/foods/search"
@@ -12,21 +13,53 @@ headers = {
 def _g_to_mg(value):
     return round(value * 1000, 2) if value is not None else None
 
+def _per1g(value):
+    return round(value / 100, 6) if value is not None else None
+
+def _parse_off_serving(serving_str: str | None) -> tuple[str | None, float | None]:
+    """Parse OFF serving_size string into (name, grams_per_unit). Returns (None, None) on failure."""
+    if not serving_str:
+        return None, None
+    s = serving_str.strip()
+    # Skip ml-only strings (density unknown)
+    if re.fullmatch(r'[\d.]+\s*ml', s, re.IGNORECASE):
+        return None, None
+    # Extract grams value
+    g_match = re.search(r'(\d+(?:\.\d+)?)\s*g\b', s, re.IGNORECASE)
+    if not g_match:
+        return None, None
+    grams = float(g_match.group(1))
+    if grams <= 0:
+        return None, None
+    # Try "N? name (Xg)" pattern for a named serving
+    name_match = re.match(r'^(\d+(?:\.\d+)?)?\s*([a-zA-Z][a-zA-Z ]{1,19}?)\s*\(', s)
+    if name_match:
+        count = float(name_match.group(1)) if name_match.group(1) else 1.0
+        name = name_match.group(2).strip().lower()
+        generic = {'g', 'gram', 'grams', 'ml', 'serving', 'servings', 'portion', 'portions'}
+        if name not in generic:
+            # Singularize: strip trailing 's' unless it ends in 'ss'
+            if name.endswith('s') and not name.endswith('ss') and len(name) > 3:
+                name = name[:-1]
+            per_unit_g = round(grams / count, 2) if count > 1 else grams
+            return name, per_unit_g
+    return None, grams
+
 def _off_nutrients(nutriments: dict) -> dict:
     return {
-        "calories": nutriments.get("energy-kcal_100g"),
-        "protein": nutriments.get("proteins_100g"),
-        "carbs": nutriments.get("carbohydrates_100g"),
-        "fat": nutriments.get("fat_100g"),
-        "fiber": nutriments.get("fiber_100g"),
-        "sugar": nutriments.get("sugars_100g"),
-        "saturated_fat": nutriments.get("saturated-fat_100g"),
-        "sodium": _g_to_mg(nutriments.get("sodium_100g")),
-        "potassium": _g_to_mg(nutriments.get("potassium_100g")),
-        "calcium": _g_to_mg(nutriments.get("calcium_100g")),
-        "magnesium": _g_to_mg(nutriments.get("magnesium_100g")),
-        "iron": _g_to_mg(nutriments.get("iron_100g")),
-        "zinc": _g_to_mg(nutriments.get("zinc_100g")),
+        "calories": _per1g(nutriments.get("energy-kcal_100g")),
+        "protein": _per1g(nutriments.get("proteins_100g")),
+        "carbs": _per1g(nutriments.get("carbohydrates_100g")),
+        "fat": _per1g(nutriments.get("fat_100g")),
+        "fiber": _per1g(nutriments.get("fiber_100g")),
+        "sugar": _per1g(nutriments.get("sugars_100g")),
+        "saturated_fat": _per1g(nutriments.get("saturated-fat_100g")),
+        "sodium": _per1g(_g_to_mg(nutriments.get("sodium_100g"))),
+        "potassium": _per1g(_g_to_mg(nutriments.get("potassium_100g"))),
+        "calcium": _per1g(_g_to_mg(nutriments.get("calcium_100g"))),
+        "magnesium": _per1g(_g_to_mg(nutriments.get("magnesium_100g"))),
+        "iron": _per1g(_g_to_mg(nutriments.get("iron_100g"))),
+        "zinc": _per1g(_g_to_mg(nutriments.get("zinc_100g"))),
         "vitamin_d": None,
         "vitamin_c": None,
         "vitamin_a": None,
@@ -52,11 +85,14 @@ def search_open_food_facts(query: str) -> list[dict]:
         name = product.get("product_name", "").strip()
         if not name:
             continue
+        serving_name, serving_g = _parse_off_serving(product.get("serving_size"))
         results.append({
             "name": name,
             "source": "open_food_facts",
-            "serving_size": 100,
+            "serving_size": 1,
             "serving_unit": "g",
+            "default_serving_name": serving_name,
+            "default_serving_g": serving_g,
             **_off_nutrients(product.get("nutriments", {})),
         })
     return results
@@ -77,11 +113,14 @@ def lookup_barcode(barcode: str) -> dict | None:
     if not name:
         return None
 
+    serving_name, serving_g = _parse_off_serving(product.get("serving_size"))
     return {
         "name": name,
         "source": "open_food_facts",
-        "serving_size": 100,
+        "serving_size": 1,
         "serving_unit": "g",
+        "default_serving_name": serving_name,
+        "default_serving_g": serving_g,
         **_off_nutrients(product.get("nutriments", {})),
     }
 
@@ -114,25 +153,27 @@ def search_usda(query: str) -> list[dict]:
             "source": "usda",
             "external_id": str(food.get("fdcId")),
             "data_type": food.get("dataType"),
-            "serving_size": 100,
+            "serving_size": 1,
             "serving_unit": "g",
-            "calories": energy_kcal,
-            "protein": _pos(nutrients.get("Protein")),
-            "carbs": _pos(nutrients.get("Carbohydrate, by difference")),
-            "fat": _pos(nutrients.get("Total lipid (fat)")),
-            "fiber": _pos(nutrients.get("Fiber, total dietary")),
-            "sugar": _pos(nutrients.get("Sugars, total including NLEA")),
-            "saturated_fat": _pos(nutrients.get("Fatty acids, total saturated")),
-            "sodium": _pos(nutrients.get("Sodium, Na")),
-            "potassium": _pos(nutrients.get("Potassium, K")),
-            "calcium": _pos(nutrients.get("Calcium, Ca")),
-            "magnesium": _pos(nutrients.get("Magnesium, Mg")),
-            "iron": _pos(nutrients.get("Iron, Fe")),
-            "zinc": _pos(nutrients.get("Zinc, Zn")),
-            "vitamin_d": _pos(nutrients.get("Vitamin D (D2 + D3)")),
-            "vitamin_c": _pos(nutrients.get("Vitamin C, total ascorbic acid")),
-            "vitamin_a": _pos(nutrients.get("Vitamin A, RAE")),
-            "vitamin_b12": _pos(nutrients.get("Vitamin B-12")),
-            "folate": _pos(nutrients.get("Folate, DFE")),
+            "default_serving_name": None,
+            "default_serving_g": None,
+            "calories": _per1g(energy_kcal),
+            "protein": _per1g(_pos(nutrients.get("Protein"))),
+            "carbs": _per1g(_pos(nutrients.get("Carbohydrate, by difference"))),
+            "fat": _per1g(_pos(nutrients.get("Total lipid (fat)"))),
+            "fiber": _per1g(_pos(nutrients.get("Fiber, total dietary"))),
+            "sugar": _per1g(_pos(nutrients.get("Sugars, total including NLEA"))),
+            "saturated_fat": _per1g(_pos(nutrients.get("Fatty acids, total saturated"))),
+            "sodium": _per1g(_pos(nutrients.get("Sodium, Na"))),
+            "potassium": _per1g(_pos(nutrients.get("Potassium, K"))),
+            "calcium": _per1g(_pos(nutrients.get("Calcium, Ca"))),
+            "magnesium": _per1g(_pos(nutrients.get("Magnesium, Mg"))),
+            "iron": _per1g(_pos(nutrients.get("Iron, Fe"))),
+            "zinc": _per1g(_pos(nutrients.get("Zinc, Zn"))),
+            "vitamin_d": _per1g(_pos(nutrients.get("Vitamin D (D2 + D3)"))),
+            "vitamin_c": _per1g(_pos(nutrients.get("Vitamin C, total ascorbic acid"))),
+            "vitamin_a": _per1g(_pos(nutrients.get("Vitamin A, RAE"))),
+            "vitamin_b12": _per1g(_pos(nutrients.get("Vitamin B-12"))),
+            "folate": _per1g(_pos(nutrients.get("Folate, DFE"))),
         })
     return results

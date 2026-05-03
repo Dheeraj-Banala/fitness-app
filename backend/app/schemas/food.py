@@ -5,6 +5,8 @@ class FoodBase(BaseModel):
     name: str
     serving_size: float
     serving_unit: str
+    default_serving_g: float | None = None
+    default_serving_name: str | None = None
     calories: float
     protein: float | None = None
     carbs: float | None = None

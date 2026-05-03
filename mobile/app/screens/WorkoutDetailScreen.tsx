@@ -2,7 +2,9 @@ import React from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { usePreferences } from '../context/PreferencesContext';
 import { apiFetch } from '../services/api';
+import { kgToLbs } from '../utils/units';
 
 type WorkoutSet = {
   id: number;
@@ -32,10 +34,13 @@ function groupByExercise(sets: WorkoutSet[]): { exercise: string; sets: WorkoutS
   return Array.from(map.entries()).map(([exercise, sets]) => ({ exercise, sets }));
 }
 
-function formatSet(s: WorkoutSet): string {
+function formatSet(s: WorkoutSet, weightUnit: 'kg' | 'lbs'): string {
   const parts: string[] = [];
   if (s.reps != null) parts.push(`${s.reps} reps`);
-  if (s.weight != null) parts.push(`${s.weight} kg`);
+  if (s.weight != null) {
+    const display = weightUnit === 'lbs' ? Math.round(kgToLbs(s.weight) * 10) / 10 : s.weight;
+    parts.push(`${display} ${weightUnit}`);
+  }
   if (s.duration_seconds != null) {
     const m = Math.floor(s.duration_seconds / 60);
     const sec = s.duration_seconds % 60;
@@ -49,6 +54,7 @@ export default function WorkoutDetailScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { weightUnit } = usePreferences();
   const workout = (route.params as { workout: Workout }).workout;
   const groups = groupByExercise(workout.sets);
 
@@ -85,7 +91,7 @@ export default function WorkoutDetailScreen() {
             {item.sets.map(s => (
               <View key={s.id} style={styles.setRow}>
                 <Text style={styles.setNumber}>Set {s.set_number}</Text>
-                <Text style={styles.setDetail}>{formatSet(s)}</Text>
+                <Text style={styles.setDetail}>{formatSet(s, weightUnit)}</Text>
               </View>
             ))}
           </View>
