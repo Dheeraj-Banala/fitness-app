@@ -145,10 +145,15 @@ export default function CreateWorkoutScreen() {
       {blocks.map((block, bi) => (
         <View key={bi} style={styles.block}>
           <View style={styles.blockHeader}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.blockName}>{block.exercise_name}</Text>
               <Text style={styles.blockMuscle}>{block.primary_muscle}</Text>
             </View>
+            <TouchableOpacity
+              style={styles.historyButton}
+              onPress={() => (navigation as any).navigate('ExerciseHistory', { exerciseName: block.exercise_name })}>
+              <Text style={styles.historyButtonText}>History</Text>
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => setBlocks(blocks.filter((_, i) => i !== bi))}>
               <Text style={styles.removeBlock}>✕</Text>
             </TouchableOpacity>
@@ -236,6 +241,8 @@ const styles = StyleSheet.create({
   blockName: { fontSize: 16, fontWeight: '600' },
   blockMuscle: { fontSize: 13, color: '#888', marginTop: 2 },
   removeBlock: { fontSize: 18, color: '#FF3B30', paddingLeft: 12 },
+  historyButton: { backgroundColor: '#007AFF', borderRadius: 6, paddingVertical: 4, paddingHorizontal: 10, marginRight: 8 },
+  historyButtonText: { color: 'white', fontSize: 12, fontWeight: '600' },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   setLabel: { fontSize: 13, color: '#555', width: 42 },
   setInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 8, backgroundColor: 'white', textAlign: 'center' },
