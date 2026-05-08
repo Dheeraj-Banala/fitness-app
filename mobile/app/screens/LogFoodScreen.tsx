@@ -4,6 +4,8 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
 import { FoodSearchResult } from '../services/foodSearch';
+import { colors, globalStyles } from '../theme';
+import KeyboardDismissButton from '../components/KeyboardDismissButton';
 
 type RecipeOption = {
   id: number;
@@ -87,35 +89,20 @@ export default function LogFoodScreen() {
       } else if (isRecipe) {
         await apiFetch('/food-logs/', token, {
           method: 'POST',
-          body: JSON.stringify({
-            recipe_id: recipe!.id,
-            meal_type: mealType,
-            quantity: parseFloat(quantity),
-            unit: 'serving',
-            date,
-          }),
+          body: JSON.stringify({ recipe_id: recipe!.id, meal_type: mealType, quantity: parseFloat(quantity), unit: 'serving', date }),
         });
       } else {
         let foodId = food!.id;
         if (!food!.is_local) {
-          const saved = await apiFetch('/foods/', token, {
-            method: 'POST',
-            body: JSON.stringify(food),
-          });
+          const saved = await apiFetch('/foods/', token, { method: 'POST', body: JSON.stringify(food) });
           foodId = saved.id;
         }
         await apiFetch('/food-logs/', token, {
           method: 'POST',
-          body: JSON.stringify({
-            food_id: foodId,
-            meal_type: mealType,
-            quantity: parseFloat(quantity),
-            unit: selectedUnit,
-            date,
-          }),
+          body: JSON.stringify({ food_id: foodId, meal_type: mealType, quantity: parseFloat(quantity), unit: selectedUnit, date }),
         });
       }
-      (navigation as any).navigate('FoodLog');
+      (navigation as any).popToTop();
     } catch (e) {
       Alert.alert('Error', 'Could not save food log');
     }
@@ -124,11 +111,9 @@ export default function LogFoodScreen() {
   const preview = macroPreview();
 
   return (
-    <View style={styles.container}>
+    <View style={styles.screen}>
       <Text style={styles.name}>{name}</Text>
-      {isRecipe && (
-        <Text style={styles.subtitle}>per serving ({recipe!.servings} servings total)</Text>
-      )}
+      {isRecipe && <Text style={styles.subtitle}>per serving ({recipe!.servings} servings total)</Text>}
 
       {!isRecipe && !isEditing && (
         <View style={styles.unitPicker}>
@@ -150,64 +135,73 @@ export default function LogFoodScreen() {
       )}
 
       <TextInput
-        style={styles.input}
+                keyboardAppearance="dark"
+        style={globalStyles.input}
         placeholder={isRecipe ? 'Servings' : `Quantity (${selectedUnit})`}
+        placeholderTextColor={colors.textSecondary}
         value={quantity}
         onChangeText={setQuantity}
         keyboardType="decimal-pad"
         autoFocus
       />
 
-      <View style={styles.macroBox}>
-        <Text style={styles.macroCals}>{preview.calories ?? '?'} kcal</Text>
+      <View style={[globalStyles.card, styles.macroBox]}>
+        <Text style={styles.macroCals}>{preview.calories ?? '?'} <Text style={styles.macroUnit}>kcal</Text></Text>
         <View style={styles.macroRow}>
-          <Text style={styles.macroItem}>P: {preview.protein ?? '?'}g</Text>
-          <Text style={styles.macroItem}>C: {preview.carbs ?? '?'}g</Text>
-          <Text style={styles.macroItem}>F: {preview.fat ?? '?'}g</Text>
+          <Text style={styles.macroItem}>P: <Text style={styles.macroValue}>{preview.protein ?? '?'}g</Text></Text>
+          <Text style={styles.macroItem}>C: <Text style={styles.macroValue}>{preview.carbs ?? '?'}g</Text></Text>
+          <Text style={styles.macroItem}>F: <Text style={styles.macroValue}>{preview.fat ?? '?'}g</Text></Text>
         </View>
       </View>
 
-      <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-        <Text style={styles.confirmButtonText}>{isEditing ? 'Update' : 'Log Food'}</Text>
+      <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm}>
+        <Text style={styles.confirmBtnText}>{isEditing ? 'Update' : 'Log Food'}</Text>
       </TouchableOpacity>
 
       {food?.is_local && food.id != null && (
-        <TouchableOpacity style={styles.editButton} onPress={() => (navigation as any).navigate('EditFood', { foodId: food.id })}>
-          <Text style={styles.editButtonText}>Edit Food</Text>
+        <TouchableOpacity style={styles.editBtn} onPress={() => (navigation as any).navigate('EditFood', { foodId: food.id })}>
+          <Text style={styles.editBtnText}>Edit Food</Text>
         </TouchableOpacity>
       )}
 
       {isRecipe && recipe?.id != null && (
-        <TouchableOpacity style={styles.editButton} onPress={() => (navigation as any).navigate('EditRecipe', { recipeId: recipe.id })}>
-          <Text style={styles.editButtonText}>Edit Recipe</Text>
+        <TouchableOpacity style={styles.editBtn} onPress={() => (navigation as any).navigate('EditRecipe', { recipeId: recipe.id })}>
+          <Text style={styles.editBtnText}>Edit Recipe</Text>
         </TouchableOpacity>
       )}
 
       <TouchableOpacity onPress={() => navigation.goBack()}>
         <Text style={styles.cancelText}>Cancel</Text>
       </TouchableOpacity>
+
+      <KeyboardDismissButton />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24 },
-  name: { fontSize: 20, fontWeight: '600', marginBottom: 4 },
-  subtitle: { fontSize: 13, color: '#888', marginBottom: 20 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16 },
-  macroBox: { backgroundColor: '#f5f5f5', borderRadius: 10, padding: 16, alignItems: 'center', marginBottom: 24 },
-  macroCals: { fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
-  macroRow: { flexDirection: 'row', gap: 20 },
-  macroItem: { fontSize: 15, color: '#555' },
-  unitPicker: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  unitOption: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: '#ccc', backgroundColor: '#f5f5f5' },
-  unitOptionActive: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
-  unitOptionText: { fontSize: 14, fontWeight: '500', color: '#555' },
+  screen: { flex: 1, backgroundColor: colors.bg, padding: 24 },
+
+  name: { fontSize: 22, fontWeight: '700', color: colors.textPrimary, marginBottom: 16 },
+  subtitle: { fontSize: 13, color: colors.textSecondary, marginBottom: 20 },
+
+  unitPicker: { flexDirection: 'row', gap: 8, marginBottom: 14, flexWrap: 'wrap' },
+  unitOption: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: colors.cardBorder, backgroundColor: colors.card },
+  unitOptionActive: { backgroundColor: colors.blue, borderColor: colors.blue },
+  unitOptionText: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
   unitOptionTextActive: { color: 'white' },
-  servingHint: { fontSize: 12, color: '#888', marginBottom: 8 },
-  confirmButton: { backgroundColor: '#34C759', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 12 },
-  confirmButtonText: { color: 'white', fontWeight: '600', fontSize: 16 },
-  editButton: { borderWidth: 1, borderColor: '#007AFF', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 12 },
-  editButtonText: { color: '#007AFF', fontWeight: '600', fontSize: 16 },
-  cancelText: { color: '#FF3B30', textAlign: 'center', padding: 8 },
+  servingHint: { fontSize: 12, color: colors.textSecondary, marginBottom: 8 },
+
+  macroBox: { padding: 20, alignItems: 'center', marginBottom: 24 },
+  macroCals: { fontSize: 32, fontWeight: '700', color: colors.textPrimary, marginBottom: 10 },
+  macroUnit: { fontSize: 18, fontWeight: '400', color: colors.textSecondary },
+  macroRow: { flexDirection: 'row', gap: 24 },
+  macroItem: { fontSize: 14, color: colors.textSecondary },
+  macroValue: { fontWeight: '600', color: colors.textPrimary },
+
+  confirmBtn: { backgroundColor: colors.success, borderRadius: 12, padding: 15, alignItems: 'center', marginBottom: 12 },
+  confirmBtnText: { color: 'white', fontWeight: '600', fontSize: 16 },
+  editBtn: { borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 12, backgroundColor: 'rgba(0,122,255,0.08)' },
+  editBtnText: { color: colors.blue, fontWeight: '600', fontSize: 15 },
+  cancelText: { color: colors.destructive, textAlign: 'center', padding: 8, fontWeight: '500' },
 });

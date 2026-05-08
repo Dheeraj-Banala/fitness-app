@@ -1,65 +1,91 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { apiFetch } from '../services/api';
+import { colors, globalStyles } from '../theme';
+import KeyboardDismissButton from '../components/KeyboardDismissButton';
 
 export default function LoginScreen() {
-    const { setTokens } = useAuth();
-    const navigation = useNavigation();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+  const { setTokens } = useAuth();
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-    async function handleLogin() {
-        try {
-            const data = await apiFetch('/users/login', null, {
-                method: 'POST',
-                body: JSON.stringify({ email, password }),
-            });
-            setTokens(data.access_token, data.refresh_token);
-        } catch(e) {
-            setError('Invalid email or password');
-        }
+  async function handleLogin() {
+    try {
+      const data = await apiFetch('/users/login', null, {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+      setTokens(data.access_token, data.refresh_token);
+    } catch (e) {
+      setError('Invalid email or password');
     }
+  }
 
-    return (
-        <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <View>
-                <Text style={styles.title}>Food & Fitness</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                />
-                {error ? <Text style={styles.error}>{error}</Text> : null}
-                <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                    <Text style={styles.buttonText}>Log In</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => (navigation as any).navigate('Register')}>
-                    <Text style={styles.registerLink}>Don't have an account? Register</Text>
-                </TouchableOpacity>
-            </View>
-        </KeyboardAvoidingView>
-    );
+  return (
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={styles.content}>
+        <Text style={styles.appName}>Food & Fitness</Text>
+        <Text style={styles.subtitle}>Track your nutrition and workouts</Text>
+
+        <View style={[globalStyles.card, styles.formCard]}>
+          <TextInput
+                keyboardAppearance="dark"
+            style={[styles.cardInput, styles.borderBottom]}
+            placeholder="Email"
+            placeholderTextColor={colors.textSecondary}
+            value={email}
+            onChangeText={t => { setEmail(t); setError(''); }}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          <TextInput
+                keyboardAppearance="dark"
+            style={styles.cardInput}
+            placeholder="Password"
+            placeholderTextColor={colors.textSecondary}
+            value={password}
+            onChangeText={t => { setPassword(t); setError(''); }}
+            secureTextEntry
+          />
+        </View>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
+          <Text style={styles.loginBtnText}>Log In</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => (navigation as any).navigate('Register')}>
+          <Text style={styles.registerLink}>Don't have an account? <Text style={styles.registerLinkBold}>Register</Text></Text>
+        </TouchableOpacity>
+      </View>
+      <KeyboardDismissButton />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, justifyContent: 'center', padding: 24 },
-    title: { fontSize: 28, fontWeight: 'bold', marginBottom: 32, textAlign: 'center' },
-    input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 16},
-    error: { color: 'red', marginBottom: 16},
-    registerLink: { marginTop: 16, textAlign: 'center', color: '#007AFF' },
-    button: { backgroundColor: '#007AFF', padding: 14, borderRadius: 8, alignItems: 'center' },
-    buttonText: { color: 'white', fontWeight: '600', fontSize: 16 },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  content: { padding: 24, paddingTop: 60 },
+
+  appName: { fontSize: 34, fontWeight: '700', color: colors.textPrimary, textAlign: 'center', marginBottom: 8 },
+  subtitle: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', marginBottom: 40 },
+
+  formCard: { marginBottom: 12 },
+  cardInput: { paddingHorizontal: 16, paddingVertical: 14, color: colors.textPrimary, fontSize: 15 },
+  borderBottom: { borderBottomWidth: 1, borderBottomColor: colors.divider },
+
+  error: { color: colors.destructive, fontSize: 14, marginBottom: 12, textAlign: 'center' },
+
+  loginBtn: { backgroundColor: colors.blue, borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 4, marginBottom: 20 },
+  loginBtnText: { color: 'white', fontWeight: '600', fontSize: 16 },
+
+  registerLink: { textAlign: 'center', fontSize: 14, color: colors.textSecondary },
+  registerLinkBold: { color: colors.blue, fontWeight: '600' },
 });

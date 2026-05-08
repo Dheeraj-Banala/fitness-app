@@ -1,8 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
+import { colors, globalStyles } from '../theme';
 
 type NutritionSummary = {
   id: number; name: string;
@@ -42,6 +44,16 @@ const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 function toLocalDateString(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function formatDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  const today = toLocalDateString(new Date());
+  const yesterday = (() => { const y = new Date(); y.setDate(y.getDate() - 1); return toLocalDateString(y); })();
+  if (dateStr === today) return 'Today';
+  if (dateStr === yesterday) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
 export default function FoodLogScreen() {
@@ -85,7 +97,7 @@ export default function FoodLogScreen() {
 
   async function handleDelete(logId: number) {
     try {
-      await apiFetch(`/food-logs/${logId}`, token,  { method: 'DELETE' });
+      await apiFetch(`/food-logs/${logId}`, token, { method: 'DELETE' });
       loadLogs();
     } catch (e) {}
   }
@@ -121,61 +133,81 @@ export default function FoodLogScreen() {
     };
   }
 
+  const insets = useSafeAreaInsets();
+  const totals = dailyTotals();
+
+  const macroRows = [
+    { label: 'Protein', value: totals.protein, goal: goals?.protein_g, unit: 'g',    color: colors.blue },
+    { label: 'Carbs',   value: totals.carbs,   goal: goals?.carbs_g,   unit: 'g',    color: colors.success },
+    { label: 'Fat',     value: totals.fat,     goal: goals?.fat_g,     unit: 'g',    color: colors.purple },
+    { label: 'Fiber',   value: totals.fiber,   goal: 28,               unit: 'g',    color: colors.teal },
+  ];
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingTop: insets.top + 16 }}>
+      {/* Date navigation */}
       <View style={styles.dateRow}>
-        <TouchableOpacity onPress={() => changeDate(-1)}>
-          <Text style={styles.arrow}>{'<'}</Text>
+        <TouchableOpacity onPress={() => changeDate(-1)} style={styles.arrowBtn}>
+          <Text style={styles.arrow}>‹</Text>
         </TouchableOpacity>
-        <Text style={styles.date}>{date}</Text>
-        <TouchableOpacity onPress={() => changeDate(1)}>
-          <Text style={styles.arrow}>{'>'}</Text>
+        <Text style={styles.dateText}>{formatDate(date)}</Text>
+        <TouchableOpacity onPress={() => changeDate(1)} style={styles.arrowBtn}>
+          <Text style={styles.arrow}>›</Text>
         </TouchableOpacity>
       </View>
 
-      {(() => {
-        const totals = dailyTotals();
-        return (
-          <View style={styles.summaryCard}>
-            {[
-              { label: 'Calories', value: totals.calories, goal: goals?.calories, unit: 'kcal', color: '#FF9500' },
-              { label: 'Protein',  value: totals.protein,  goal: goals?.protein_g, unit: 'g',    color: '#007AFF' },
-              { label: 'Carbs',    value: totals.carbs,    goal: goals?.carbs_g,   unit: 'g',    color: '#34C759' },
-              { label: 'Fat',      value: totals.fat,      goal: goals?.fat_g,     unit: 'g',    color: '#AF52DE' },
-            ].map(({ label, value, goal, unit, color }) => (
-              <View key={label} style={styles.progressRow}>
-                <View style={styles.progressLabelRow}>
-                  <Text style={styles.progressLabel}>{label}</Text>
-                  <Text style={styles.progressValue}>{value} / {goal ?? '—'} {unit}</Text>
-                </View>
-                <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: `${Math.min((value / (goal ?? 1)) * 100, 100)}%`, backgroundColor: color }]} />
-                </View>
-              </View>
-            ))}
-            <View style={styles.fiberRow}>
-              <Text style={styles.fiberLabel}>Fiber</Text>
-              <Text style={styles.fiberValue}>{totals.fiber} / 28 g</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.microsButton}
-              onPress={() => (navigation as any).navigate('Micronutrients', { micros: totals.micros, date })}
-            >
-              <Text style={styles.microsButtonText}>Micronutrients</Text>
-            </TouchableOpacity>
-          </View>
-        );
-      })()}
+      {/* Summary card */}
+      <View style={[globalStyles.card, styles.summaryCard]}>
+        {/* Calories — large bar */}
+        <View style={styles.calorieRow}>
+          <Text style={styles.calorieHeadline}>
+            {totals.calories} <Text style={styles.calorieGoal}>/ {goals?.calories ?? '—'} kcal</Text>
+          </Text>
+        </View>
+        <View style={styles.calorieTrack}>
+          <View style={[styles.calorieFill, {
+            width: `${Math.min((totals.calories / (goals?.calories ?? 1)) * 100, 100)}%`,
+          }]} />
+        </View>
 
-      {MEAL_TYPES.map(mealType => (
-        <View key={mealType} style={styles.mealSection}>
-          <View style={styles.mealHeader}>
-            <Text style={styles.mealTitle}>{mealType.charAt(0).toUpperCase() + mealType.slice(1)}</Text>
-            <TouchableOpacity onPress={() => (navigation as any).navigate('AddFood' as never, { mealType, date } as never)}>
-              <Text style={styles.addButton}>+</Text>
-            </TouchableOpacity>
+        <View style={styles.macroDivider} />
+
+        {macroRows.map(({ label, value, goal, unit, color }) => (
+          <View key={label} style={styles.macroRow}>
+            <Text style={styles.macroLabel}>{label}</Text>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, {
+                width: `${Math.min((value / (goal ?? 1)) * 100, 100)}%`,
+                backgroundColor: color,
+              }]} />
+            </View>
+            <Text style={styles.macroValue}>{value}<Text style={styles.macroGoal}> / {goal ?? '—'}{unit}</Text></Text>
           </View>
-          {logsForMeal(mealType).map(log => {
+        ))}
+
+        <TouchableOpacity
+          style={styles.microsBtn}
+          onPress={() => (navigation as any).navigate('Micronutrients', { micros: totals.micros, date })}
+        >
+          <Text style={styles.microsBtnText}>Micronutrients  ›</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Meal sections */}
+      {MEAL_TYPES.map(mealType => {
+        const mealLogs = logsForMeal(mealType);
+        return (
+          <View key={mealType} style={[globalStyles.card, styles.mealCard]}>
+            <View style={styles.mealHeader}>
+              <Text style={styles.mealTitle}>{mealType.toUpperCase()}</Text>
+              <TouchableOpacity onPress={() => (navigation as any).navigate('AddFood', { mealType, date })}>
+                <Text style={styles.addBtn}>＋</Text>
+              </TouchableOpacity>
+            </View>
+
+            {mealLogs.length > 0 && <View style={styles.divider} />}
+
+            {mealLogs.map((log, index) => {
               const isRecipe = !!log.recipe_id;
               const name = isRecipe ? log.recipe?.name : log.food?.name;
               const scale = isRecipe
@@ -188,61 +220,79 @@ export default function FoodLogScreen() {
               const fat     = source?.fat      != null ? Math.round(source.fat      * scale) : null;
 
               return (
-                    <TouchableOpacity key={log.id} style={styles.logItem} onPress={() => (navigation as any).navigate('LogFood', {
+                <View key={log.id}>
+                  {index > 0 && <View style={styles.itemDivider} />}
+                  <TouchableOpacity
+                    style={styles.logItem}
+                    onPress={() => (navigation as any).navigate('LogFood', {
                       mealType: log.meal_type,
                       date: log.date,
                       food: log.food ? { ...log.food, id: log.food_id, is_local: true, data_type: null, external_id: null } : undefined,
                       recipe: log.recipe ?? undefined,
                       logId: log.id,
                       initialQuantity: log.quantity,
-                    })}>
-                      <View style={styles.logRow}>
-                          <View style={styles.logInfo}>
-                              <Text style={styles.logName}>{name ?? 'Unknown'}</Text>
-                              <Text style={styles.logDetail}>{log.quantity} {displayUnit(log.quantity, log.unit)} · {cals ?? '?'} kcal</Text>
-                              <Text style={styles.logDetail}>P: {protein ?? '?'}g · C: {carbs ?? '?'}g · F: {fat ?? '?'}g</Text>
-                          </View>
-                          <TouchableOpacity onPress={() => handleDelete(log.id)}>
-                              <Text style={styles.deleteButton}>✕</Text>
-                          </TouchableOpacity>
+                    })}
+                  >
+                    <View style={styles.logRow}>
+                      <View style={styles.logInfo}>
+                        <Text style={styles.logName}>{name ?? 'Unknown'}</Text>
+                        <Text style={styles.logDetail}>
+                          {log.quantity} {displayUnit(log.quantity, log.unit)} · {cals ?? '?'} kcal · P:{protein ?? '?'}g C:{carbs ?? '?'}g F:{fat ?? '?'}g
+                        </Text>
                       </View>
+                      <TouchableOpacity onPress={() => handleDelete(log.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Text style={styles.deleteBtn}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
                   </TouchableOpacity>
+                </View>
               );
-          })}
-        </View>
-      ))}
+            })}
+          </View>
+        );
+      })}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.bg },
+
   dateRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  arrow: { fontSize: 24, paddingHorizontal: 16 },
-  date: { fontSize: 18, fontWeight: '600' },
-  mealSection: { marginBottom: 16 },
-  mealHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  mealTitle: { fontSize: 16, fontWeight: '600', textTransform: 'capitalize' },
-  addButton: { fontSize: 24, color: '#007AFF' },
-  logItem: { padding: 8, backgroundColor: '#f5f5f5', borderRadius: 6, marginBottom: 4 },
-  logName: { fontSize: 15, fontWeight: '500' },
-  logDetail: { color: '#666', marginTop: 2, fontSize: 13 },
-  summaryCard: { backgroundColor: '#f0f0f0', borderRadius: 10, padding: 14, marginBottom: 16 },
-  summaryCalories: { fontSize: 22, fontWeight: 'bold', marginBottom: 4 },
-  summaryMacros: { flexDirection: 'row', gap: 16 },
-  summaryMacro: { fontSize: 14, color: '#555' },
-  logRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  arrowBtn: { padding: 8 },
+  arrow: { fontSize: 28, color: colors.blue, fontWeight: '300' },
+  dateText: { fontSize: 17, fontWeight: '600', color: colors.textPrimary },
+
+  summaryCard: { padding: 16, marginBottom: 16 },
+  calorieRow: { marginBottom: 8 },
+  calorieHeadline: { fontSize: 28, fontWeight: '700', color: colors.textPrimary },
+  calorieGoal: { fontSize: 18, fontWeight: '400', color: colors.textSecondary },
+  calorieTrack: { height: 10, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 5, marginBottom: 4 },
+  calorieFill: { height: 10, borderRadius: 5, backgroundColor: colors.warning },
+  macroDivider: { height: 1, backgroundColor: colors.divider, marginVertical: 12 },
+
+  macroRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  macroLabel: { fontSize: 13, color: colors.textSecondary, width: 58 },
+  progressTrack: { flex: 1, height: 6, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 3, marginHorizontal: 10 },
+  progressFill: { height: 6, borderRadius: 3 },
+  macroValue: { fontSize: 13, fontWeight: '600', color: colors.textPrimary, minWidth: 72, textAlign: 'right' },
+  macroGoal: { fontSize: 12, fontWeight: '400', color: colors.textSecondary },
+
+  microsBtn: { backgroundColor: 'rgba(0,122,255,0.12)', borderRadius: 8, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,122,255,0.2)' },
+  microsBtnText: { fontSize: 14, fontWeight: '600', color: colors.blue },
+
+  mealCard: { marginBottom: 14, overflow: 'hidden' },
+  mealHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+  mealTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary, letterSpacing: 0.5 },
+  addBtn: { fontSize: 22, color: colors.blue, lineHeight: 26 },
+
+  divider: { height: 1, backgroundColor: colors.divider },
+  itemDivider: { height: 1, backgroundColor: colors.divider, marginLeft: 16 },
+
+  logItem: { paddingHorizontal: 16, paddingVertical: 11 },
+  logRow: { flexDirection: 'row', alignItems: 'center' },
   logInfo: { flex: 1 },
-  deleteButton: { color: '#FF3B30', fontSize: 16, paddingLeft: 12 },
-  progressRow: { marginBottom: 12 },
-  progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  progressLabel: { fontSize: 14, fontWeight: '500', color: '#333' },
-  progressValue: { fontSize: 13, color: '#666' },
-  progressTrack: { height: 8, backgroundColor: '#e0e0e0', borderRadius: 4 },
-  progressFill: { height: 8, borderRadius: 4 },
-  fiberRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, marginBottom: 8 },
-  fiberLabel: { fontSize: 13, color: '#555' },
-  fiberValue: { fontSize: 13, color: '#666' },
-  microsButton: { backgroundColor: '#E5E5EA', borderRadius: 8, padding: 10, alignItems: 'center', marginTop: 4 },
-  microsButtonText: { fontSize: 14, fontWeight: '600', color: '#333' },
+  logName: { fontSize: 15, fontWeight: '500', color: colors.textPrimary, marginBottom: 2 },
+  logDetail: { fontSize: 12, color: colors.textSecondary },
+  deleteBtn: { color: colors.destructive, fontSize: 14, paddingLeft: 12 },
 });

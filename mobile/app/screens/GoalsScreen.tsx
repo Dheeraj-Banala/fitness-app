@@ -1,21 +1,17 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, Button, StyleSheet, Alert, Keyboard } from 'react-native';
-import { useAuth } from "../context/AuthContext";
-import { usePreferences } from "../context/PreferencesContext";
-import { apiFetch } from "../services/api";
-import { mlToOz, ozToMl } from "../utils/units";
-
-type Goals = {
-  calories: number | null;
-  protein_g: number | null;
-  carbs_g: number | null;
-  fat_g: number | null;
-  water_ml: number | null;
-}
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Alert, Keyboard, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
+import { usePreferences } from '../context/PreferencesContext';
+import { apiFetch } from '../services/api';
+import { mlToOz, ozToMl } from '../utils/units';
+import { colors, globalStyles } from '../theme';
+import KeyboardDismissButton from '../components/KeyboardDismissButton';
 
 export default function GoalsScreen() {
   const { token } = useAuth();
   const { volumeUnit } = usePreferences();
+  const insets = useSafeAreaInsets();
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -28,26 +24,20 @@ export default function GoalsScreen() {
   async function loadGoals() {
     try {
       const data = await apiFetch('/goals/', token);
-      setCalories(data.calories?.toString() ?? '')
-      setProtein(data.protein_g?.toString() ?? '')
-      setCarbs(data.carbs_g?.toString() ?? '')
-      setFat(data.fat_g?.toString() ?? '')
+      setCalories(data.calories?.toString() ?? '');
+      setProtein(data.protein_g?.toString() ?? '');
+      setCarbs(data.carbs_g?.toString() ?? '');
+      setFat(data.fat_g?.toString() ?? '');
       setWater(data.water_ml != null ? (volumeUnit === 'oz' ? mlToOz(data.water_ml) : data.water_ml).toString() : '');
-      setGoalsExist(true)
-    } catch (e) {
-      // 404 means no goals set yet, which is fine
-    }
+      setGoalsExist(true);
+    } catch (e) {}
   }
 
   async function handleSave() {
     Keyboard.dismiss();
-    let method = 'PUT';
-    if (!goalsExist) {
-      method = 'POST';
-    }
     try {
       await apiFetch('/goals/', token, {
-        method: method,
+        method: goalsExist ? 'PUT' : 'POST',
         body: JSON.stringify({
           calories: parseFloat(calories) || null,
           protein_g: parseFloat(protein) || null,
@@ -63,68 +53,72 @@ export default function GoalsScreen() {
     }
   }
 
+  const fields = [
+    { label: 'Calories', unit: 'kcal', value: calories, setter: setCalories },
+    { label: 'Protein',  unit: 'g',    value: protein,  setter: setProtein },
+    { label: 'Carbs',    unit: 'g',    value: carbs,    setter: setCarbs },
+    { label: 'Fat',      unit: 'g',    value: fat,      setter: setFat },
+    { label: 'Water',    unit: volumeUnit, value: water, setter: setWater },
+  ];
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Goals</Text>
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>Calories (kcal)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Calories"
-          value={calories}
-          onChangeText={setCalories}
-          keyboardType="decimal-pad"
-        />
-      </View>
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>Protein (g)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Protein"
-          value={protein}
-          onChangeText={setProtein}
-          keyboardType="decimal-pad"
-        />
-      </View>
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>Carbs (g)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Carbohydrates"
-          value={carbs}
-          onChangeText={setCarbs}
-          keyboardType="decimal-pad"
-        />
-      </View>
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>Fat (g)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Fat"
-          value={fat}
-          onChangeText={setFat}
-          keyboardType="decimal-pad"
-        />
-      </View>
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>Water ({volumeUnit})</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={`Water (${volumeUnit})`}
-          value={water}
-          onChangeText={setWater}
-          keyboardType="decimal-pad"
-        />
-      </View>
-      <Button title="Save" onPress={handleSave} />
+    <View style={styles.screen}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingTop: insets.top + 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+        <Text style={styles.screenTitle}>Goals</Text>
+
+        <View style={globalStyles.card}>
+          {fields.map(({ label, unit, value, setter }, index) => (
+            <View key={label}>
+              {index > 0 && <View style={styles.divider} />}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>{label}</Text>
+                <View style={styles.inputWithUnit}>
+                  <TextInput
+                keyboardAppearance="dark"
+                    style={styles.fieldInput}
+                    value={value}
+                    onChangeText={setter}
+                    keyboardType="decimal-pad"
+                    placeholder="—"
+                    placeholderTextColor={colors.textSecondary}
+                  />
+                  <Text style={styles.fieldUnit}>{unit}</Text>
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+          <Text style={styles.saveBtnText}>Save Goals</Text>
+        </TouchableOpacity>
+      </ScrollView>
+      <KeyboardDismissButton />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
-  fieldGroup: { marginBottom: 12 },
-  label: { fontSize: 14, fontWeight: '500', color: '#333', marginBottom: 4 },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  screenTitle: { fontSize: 34, fontWeight: '700', color: colors.textPrimary, marginBottom: 24 },
+
+  divider: { height: 1, backgroundColor: colors.divider, marginHorizontal: 16 },
+  fieldRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 },
+  fieldLabel: { fontSize: 15, fontWeight: '500', color: colors.textPrimary },
+  inputWithUnit: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  fieldUnit: { fontSize: 13, color: colors.textSecondary },
+  fieldInput: {
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    borderRadius: 8,
+    padding: 8,
+    fontSize: 15,
+    width: 100,
+    textAlign: 'right',
+    color: colors.textPrimary,
+  },
+
+  saveBtn: { backgroundColor: colors.blue, borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 24 },
+  saveBtnText: { color: 'white', fontWeight: '600', fontSize: 16 },
 });

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { apiFetch } from '../services/api';
 import { kgToLbs } from '../utils/units';
+import { colors, globalStyles } from '../theme';
 
 type WorkoutSet = {
   id: number;
@@ -76,29 +77,39 @@ export default function WorkoutDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.name}>{workout.name ?? 'Workout'}</Text>
-      <Text style={styles.date}>{workout.date}</Text>
-      {workout.notes ? <Text style={styles.notes}>{workout.notes}</Text> : null}
-
       <FlatList
         data={groups}
         keyExtractor={item => item.exercise}
-        style={styles.list}
+        contentContainerStyle={styles.content}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Text style={styles.name}>{workout.name ?? 'Workout'}</Text>
+            <Text style={styles.date}>{workout.date}</Text>
+            {workout.notes ? <Text style={styles.notes}>{workout.notes}</Text> : null}
+          </View>
+        }
         renderItem={({ item }) => (
-          <View style={styles.exerciseBlock}>
-            <Text style={styles.exerciseName}>{item.exercise}</Text>
-            <Text style={styles.muscle}>{item.sets[0].primary_muscle}</Text>
-            {item.sets.map(s => (
-              <View key={s.id} style={styles.setRow}>
-                <Text style={styles.setNumber}>Set {s.set_number}</Text>
-                <Text style={styles.setDetail}>{formatSet(s, weightUnit)}</Text>
+          <View style={[globalStyles.card, styles.exerciseCard]}>
+            <View style={styles.exerciseHeader}>
+              <Text style={styles.exerciseName}>{item.exercise}</Text>
+              <Text style={styles.muscle}>{item.sets[0].primary_muscle}</Text>
+            </View>
+            <View style={styles.divider} />
+            {item.sets.map((s, i) => (
+              <View key={s.id}>
+                {i > 0 && <View style={styles.setDivider} />}
+                <View style={styles.setRow}>
+                  <Text style={styles.setNumber}>Set {s.set_number}</Text>
+                  <Text style={styles.setDetail}>{formatSet(s, weightUnit)}</Text>
+                </View>
               </View>
             ))}
           </View>
         )}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         ListFooterComponent={
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-            <Text style={styles.deleteButtonText}>Delete Workout</Text>
+          <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
+            <Text style={styles.deleteBtnText}>Delete Workout</Text>
           </TouchableOpacity>
         }
       />
@@ -107,17 +118,24 @@ export default function WorkoutDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  name: { fontSize: 22, fontWeight: 'bold' },
-  date: { color: '#666', marginTop: 4, marginBottom: 4 },
-  notes: { color: '#555', fontStyle: 'italic', marginBottom: 12 },
-  list: { marginTop: 12 },
-  exerciseBlock: { backgroundColor: '#f0f0f0', borderRadius: 10, padding: 14, marginBottom: 12 },
-  exerciseName: { fontSize: 16, fontWeight: '600', marginBottom: 2 },
-  muscle: { fontSize: 12, color: '#888', marginBottom: 10 },
-  setRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, borderTopWidth: 1, borderTopColor: '#e0e0e0' },
-  setNumber: { fontSize: 14, color: '#555' },
-  setDetail: { fontSize: 14, fontWeight: '500' },
-  deleteButton: { marginTop: 8, marginBottom: 24, padding: 14, borderRadius: 8, backgroundColor: '#FF3B30', alignItems: 'center' },
-  deleteButtonText: { color: 'white', fontWeight: '600', fontSize: 16 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  content: { padding: 16, paddingBottom: 32 },
+
+  header: { marginBottom: 20 },
+  name: { fontSize: 26, fontWeight: '700', color: colors.textPrimary },
+  date: { fontSize: 14, color: colors.textSecondary, marginTop: 4 },
+  notes: { fontSize: 14, color: colors.textSecondary, fontStyle: 'italic', marginTop: 6 },
+
+  exerciseCard: { overflow: 'hidden', padding: 0 },
+  exerciseHeader: { paddingHorizontal: 16, paddingVertical: 12 },
+  exerciseName: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+  muscle: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  divider: { height: 1, backgroundColor: colors.divider },
+  setDivider: { height: 1, backgroundColor: colors.divider, marginHorizontal: 16 },
+  setRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 },
+  setNumber: { fontSize: 14, color: colors.textSecondary },
+  setDetail: { fontSize: 14, fontWeight: '500', color: colors.textPrimary },
+
+  deleteBtn: { marginTop: 8, padding: 14, borderRadius: 12, backgroundColor: 'rgba(255,59,48,0.15)', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,59,48,0.3)' },
+  deleteBtnText: { color: colors.destructive, fontWeight: '600', fontSize: 16 },
 });

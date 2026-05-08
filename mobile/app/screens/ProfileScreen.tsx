@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { apiFetch } from '../services/api';
 import { cmToFtIn, ftInToCm } from '../utils/units';
+import { colors, globalStyles } from '../theme';
+import KeyboardDismissButton from '../components/KeyboardDismissButton';
 
 type UserProfile = {
   id: number;
@@ -15,9 +18,25 @@ type UserProfile = {
   height_unit: string;
 };
 
+function UnitToggle<T extends string>({ options, value, onChange }: { options: readonly T[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <View style={styles.toggle}>
+      {options.map(opt => (
+        <TouchableOpacity
+          key={opt}
+          style={[styles.toggleOption, value === opt && styles.toggleActive]}
+          onPress={() => onChange(opt)}>
+          <Text style={[styles.toggleText, value === opt && styles.toggleTextActive]}>{opt}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
 export default function ProfileScreen() {
   const { token, refreshToken, setTokens } = useAuth();
   const { weightUnit, volumeUnit, heightUnit, reload: reloadPrefs } = usePreferences();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [heightFeet, setHeightFeet] = useState('');
   const [heightInches, setHeightInches] = useState('');
@@ -28,7 +47,6 @@ export default function ProfileScreen() {
   const [saved, setSaved] = useState({ weight: weightUnit, volume: volumeUnit, height: heightUnit, feet: '', inches: '', cm: '' });
 
   useEffect(() => { loadProfile(); }, []);
-
   useEffect(() => {
     setSelectedWeight(weightUnit);
     setSelectedVolume(volumeUnit);
@@ -70,12 +88,7 @@ export default function ProfileScreen() {
       }
       await apiFetch('/users/me', token, {
         method: 'PATCH',
-        body: JSON.stringify({
-          height_cm,
-          weight_unit: selectedWeight,
-          volume_unit: selectedVolume,
-          height_unit: selectedHeight,
-        }),
+        body: JSON.stringify({ height_cm, weight_unit: selectedWeight, volume_unit: selectedVolume, height_unit: selectedHeight }),
       });
       reloadPrefs();
       setSaved({ weight: selectedWeight, volume: selectedVolume, height: selectedHeight, feet: heightFeet, inches: heightInches, cm: heightCm });
@@ -87,134 +100,135 @@ export default function ProfileScreen() {
 
   async function handleLogout() {
     try {
-      await apiFetch('/users/logout', token, {
-        method: 'POST',
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      });
+      await apiFetch('/users/logout', token, { method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }) });
     } finally {
       setTokens(null, null);
     }
   }
 
   const isDirty =
-    selectedWeight !== saved.weight ||
-    selectedVolume !== saved.volume ||
-    selectedHeight !== saved.height ||
-    heightFeet !== saved.feet ||
-    heightInches !== saved.inches ||
-    heightCm !== saved.cm;
-
-  function UnitToggle<T extends string>({ options, value, onChange }: { options: T[]; value: T; onChange: (v: T) => void }) {
-    return (
-      <View style={styles.toggle}>
-        {options.map(opt => (
-          <TouchableOpacity
-            key={opt}
-            style={[styles.toggleOption, value === opt && styles.toggleActive]}
-            onPress={() => onChange(opt)}
-          >
-            <Text style={[styles.toggleText, value === opt && styles.toggleTextActive]}>{opt}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    );
-  }
+    selectedWeight !== saved.weight || selectedVolume !== saved.volume ||
+    selectedHeight !== saved.height || heightFeet !== saved.feet ||
+    heightInches !== saved.inches || heightCm !== saved.cm;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-      <Text style={styles.title}>Profile</Text>
+    <View style={styles.screen}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingTop: insets.top + 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+        <Text style={styles.screenTitle}>Profile</Text>
 
-      {profile && (
-        <>
-          <View style={styles.row}>
-            <Text style={styles.label}>Username</Text>
-            <Text style={styles.value}>{profile.username}</Text>
+        {profile && (
+          <View style={[globalStyles.card, { marginBottom: 24 }]}>
+            <View style={styles.profileRow}>
+              <Text style={styles.profileLabel}>Username</Text>
+              <Text style={styles.profileValue}>{profile.username}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.profileRow}>
+              <Text style={styles.profileLabel}>Email</Text>
+              <Text style={styles.profileValue}>{profile.email}</Text>
+            </View>
           </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Email</Text>
-            <Text style={styles.value}>{profile.email}</Text>
+        )}
+
+        <Text style={styles.sectionLabel}>Units</Text>
+        <View style={globalStyles.card}>
+          <View style={styles.prefRow}>
+            <Text style={styles.prefLabel}>Weight</Text>
+            <UnitToggle options={['kg', 'lbs'] as const} value={selectedWeight} onChange={setSelectedWeight} />
           </View>
-        </>
-      )}
-
-      <Text style={styles.sectionTitle}>Units</Text>
-
-      <View style={styles.prefRow}>
-        <Text style={styles.prefLabel}>Weight</Text>
-        <UnitToggle options={['kg', 'lbs'] as const} value={selectedWeight} onChange={setSelectedWeight} />
-      </View>
-      <View style={styles.prefRow}>
-        <Text style={styles.prefLabel}>Volume</Text>
-        <UnitToggle options={['ml', 'oz'] as const} value={selectedVolume} onChange={setSelectedVolume} />
-      </View>
-      <View style={styles.prefRow}>
-        <Text style={styles.prefLabel}>Height</Text>
-        <UnitToggle options={['cm', 'ft_in'] as const} value={selectedHeight} onChange={setSelectedHeight} />
-      </View>
-
-      <Text style={styles.sectionTitle}>Body</Text>
-
-      {selectedHeight === 'ft_in' ? (
-        <View style={styles.heightRow}>
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            placeholder="Feet"
-            value={heightFeet}
-            onChangeText={setHeightFeet}
-            keyboardType="decimal-pad"
-          />
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            placeholder="Inches"
-            value={heightInches}
-            onChangeText={setHeightInches}
-            keyboardType="decimal-pad"
-          />
+          <View style={styles.divider} />
+          <View style={styles.prefRow}>
+            <Text style={styles.prefLabel}>Volume</Text>
+            <UnitToggle options={['ml', 'oz'] as const} value={selectedVolume} onChange={setSelectedVolume} />
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.prefRow}>
+            <Text style={styles.prefLabel}>Height</Text>
+            <UnitToggle options={['cm', 'ft_in'] as const} value={selectedHeight} onChange={setSelectedHeight} />
+          </View>
         </View>
-      ) : (
-        <TextInput
-          style={styles.input}
-          placeholder="Height (cm)"
-          value={heightCm}
-          onChangeText={setHeightCm}
-          keyboardType="decimal-pad"
-        />
-      )}
 
-      <TouchableOpacity
-        style={[styles.saveButton, !isDirty && styles.saveButtonDisabled]}
-        onPress={handleSave}
-        disabled={!isDirty}
-      >
-        <Text style={styles.saveText}>Save</Text>
-      </TouchableOpacity>
+        <Text style={styles.sectionLabel}>Body</Text>
+        <View style={globalStyles.card}>
+          {selectedHeight === 'ft_in' ? (
+            <View style={styles.heightRow}>
+              <TextInput
+                keyboardAppearance="dark"
+                style={[styles.cardInput, styles.flex1, styles.borderRight]}
+                placeholder="Feet"
+                placeholderTextColor={colors.textSecondary}
+                value={heightFeet}
+                onChangeText={setHeightFeet}
+                keyboardType="decimal-pad"
+              />
+              <TextInput
+                keyboardAppearance="dark"
+                style={[styles.cardInput, styles.flex1]}
+                placeholder="Inches"
+                placeholderTextColor={colors.textSecondary}
+                value={heightInches}
+                onChangeText={setHeightInches}
+                keyboardType="decimal-pad"
+              />
+            </View>
+          ) : (
+            <TextInput
+                keyboardAppearance="dark"
+              style={styles.cardInput}
+              placeholder="Height (cm)"
+              placeholderTextColor={colors.textSecondary}
+              value={heightCm}
+              onChangeText={setHeightCm}
+              keyboardType="decimal-pad"
+            />
+          )}
+        </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Log Out</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity
+          style={[styles.saveBtn, !isDirty && styles.saveBtnDisabled]}
+          onPress={handleSave}
+          disabled={!isDirty}>
+          <Text style={styles.saveBtnText}>Save Changes</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Text style={styles.logoutBtnText}>Log Out</Text>
+        </TouchableOpacity>
+      </ScrollView>
+      <KeyboardDismissButton />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 24 },
-  row: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  label: { fontSize: 12, color: '#999', marginBottom: 4 },
-  value: { fontSize: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', marginTop: 24, marginBottom: 12 },
-  prefRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  prefLabel: { fontSize: 15, color: '#333' },
-  toggle: { flexDirection: 'row', backgroundColor: '#f0f0f0', borderRadius: 8 },
-  toggleOption: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 },
-  toggleActive: { backgroundColor: '#007AFF' },
-  toggleText: { fontWeight: '600', color: '#666', fontSize: 14 },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  screenTitle: { fontSize: 34, fontWeight: '700', color: colors.textPrimary, marginBottom: 24 },
+
+  divider: { height: 1, backgroundColor: colors.divider, marginHorizontal: 16 },
+
+  profileRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
+  profileLabel: { fontSize: 13, color: colors.textSecondary },
+  profileValue: { fontSize: 15, fontWeight: '500', color: colors.textPrimary },
+
+  sectionLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 24, marginBottom: 10 },
+
+  prefRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
+  prefLabel: { fontSize: 15, color: colors.textPrimary },
+  toggle: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: 2 },
+  toggleOption: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 6 },
+  toggleActive: { backgroundColor: colors.blue },
+  toggleText: { fontWeight: '600', color: colors.textSecondary, fontSize: 14 },
   toggleTextActive: { color: 'white' },
-  heightRow: { flexDirection: 'row', gap: 8 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 15 },
-  saveButton: { backgroundColor: '#34C759', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 8, marginBottom: 12 },
-  saveButtonDisabled: { backgroundColor: '#ccc' },
-  saveText: { color: 'white', fontWeight: '600', fontSize: 16 },
-  logoutButton: { backgroundColor: '#FF3B30', padding: 14, borderRadius: 8, alignItems: 'center' },
-  logoutText: { color: 'white', fontWeight: '600', fontSize: 16 },
+
+  heightRow: { flexDirection: 'row' },
+  cardInput: { paddingHorizontal: 16, paddingVertical: 13, color: colors.textPrimary, fontSize: 15 },
+  flex1: { flex: 1 },
+  borderRight: { borderRightWidth: 1, borderRightColor: colors.divider },
+
+  saveBtn: { backgroundColor: colors.success, borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 24, marginBottom: 12 },
+  saveBtnDisabled: { backgroundColor: 'rgba(52,199,89,0.3)' },
+  saveBtnText: { color: 'white', fontWeight: '600', fontSize: 16 },
+
+  logoutBtn: { backgroundColor: 'rgba(255,59,48,0.12)', borderRadius: 12, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,59,48,0.3)' },
+  logoutBtnText: { color: colors.destructive, fontWeight: '600', fontSize: 16 },
 });

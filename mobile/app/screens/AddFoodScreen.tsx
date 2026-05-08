@@ -4,6 +4,8 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
 import { searchFoods, FoodSearchResult } from '../services/foodSearch';
+import { colors } from '../theme';
+import KeyboardDismissButton from '../components/KeyboardDismissButton';
 
 type MyFood = {
   id: number;
@@ -101,6 +103,7 @@ export default function AddFoodScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Tab toggle */}
       <View style={styles.toggle}>
         {(['food', 'recipe', 'mine'] as const).map(tab => (
           <TouchableOpacity
@@ -121,14 +124,16 @@ export default function AddFoodScreen() {
       {mode === 'food' && (
         <>
           <TouchableOpacity
-            style={styles.createButton}
+            style={styles.actionButton}
             onPress={() => (navigation as any).navigate('Barcode', { mealType, date })}>
-            <Text style={styles.createButtonText}>Scan Barcode</Text>
+            <Text style={styles.actionButtonText}>Scan Barcode</Text>
           </TouchableOpacity>
           <View style={styles.searchRow}>
             <TextInput
+                keyboardAppearance="dark"
               style={styles.searchInput}
               placeholder="Search foods..."
+              placeholderTextColor={colors.textSecondary}
               value={query}
               onChangeText={setQuery}
               onSubmitEditing={handleSearch}
@@ -138,19 +143,21 @@ export default function AddFoodScreen() {
               <Text style={styles.searchButtonText}>Search</Text>
             </TouchableOpacity>
           </View>
-
           <FlatList
             data={results}
             keyExtractor={(_, i) => i.toString()}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.resultItem} onPress={() => (navigation as any).navigate('LogFood', { food: item, mealType, date })}>
+            renderItem={({ item, index }) => (
+              <TouchableOpacity
+                style={[styles.resultItem, index === 0 && styles.resultItemFirst, index === results.length - 1 && styles.resultItemLast]}
+                onPress={() => (navigation as any).navigate('LogFood', { food: item, mealType, date })}>
                 <Text style={styles.resultName}>
                   {item.name}
-                  {item.data_type ? <Text style={styles.resultDataType}>  ·  {item.data_type}</Text> : ''}
+                  {item.data_type ? <Text style={styles.resultMeta}>  ·  {item.data_type}</Text> : ''}
                 </Text>
-                <Text style={styles.resultCals}>{item.calories != null ? Math.round(item.calories * 100) : '?'} kcal per 100g</Text>
+                <Text style={styles.resultSub}>{item.calories != null ? Math.round(item.calories * 100) : '?'} kcal per 100g</Text>
               </TouchableOpacity>
             )}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
         </>
       )}
@@ -158,14 +165,16 @@ export default function AddFoodScreen() {
       {mode === 'recipe' && (
         <>
           <TouchableOpacity
-            style={styles.createButton}
+            style={styles.actionButton}
             onPress={() => (navigation as any).navigate('CreateRecipe')}>
-            <Text style={styles.createButtonText}>+ Create Recipe</Text>
+            <Text style={styles.actionButtonText}>+ Create Recipe</Text>
           </TouchableOpacity>
           <View style={styles.searchRow}>
             <TextInput
+                keyboardAppearance="dark"
               style={styles.searchInput}
               placeholder="Search recipes..."
+              placeholderTextColor={colors.textSecondary}
               value={recipeQuery}
               onChangeText={setRecipeQuery}
               onSubmitEditing={() => loadRecipes(recipeQuery)}
@@ -178,12 +187,15 @@ export default function AddFoodScreen() {
           <FlatList
             data={recipes}
             keyExtractor={item => item.id.toString()}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.resultItem} onPress={() => (navigation as any).navigate('LogFood', { recipe: item, mealType, date })}>
+            renderItem={({ item, index }) => (
+              <TouchableOpacity
+                style={[styles.resultItem, index === 0 && styles.resultItemFirst, index === recipes.length - 1 && styles.resultItemLast]}
+                onPress={() => (navigation as any).navigate('LogFood', { recipe: item, mealType, date })}>
                 <Text style={styles.resultName}>{item.name}</Text>
-                <Text style={styles.resultCals}>{item.calories ?? '?'} kcal · {item.servings} servings</Text>
+                <Text style={styles.resultSub}>{item.calories ?? '?'} kcal · {item.servings} servings</Text>
               </TouchableOpacity>
             )}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
         </>
       )}
@@ -191,14 +203,16 @@ export default function AddFoodScreen() {
       {mode === 'mine' && (
         <>
           <TouchableOpacity
-            style={styles.createButton}
+            style={styles.actionButton}
             onPress={() => (navigation as any).navigate('CreateFood', { mealType, date })}>
-            <Text style={styles.createButtonText}>+ Create Custom Food</Text>
+            <Text style={styles.actionButtonText}>+ Create Custom Food</Text>
           </TouchableOpacity>
           <View style={styles.searchRow}>
             <TextInput
+                keyboardAppearance="dark"
               style={styles.searchInput}
               placeholder="Search my foods..."
+              placeholderTextColor={colors.textSecondary}
               value={myFoodsQuery}
               onChangeText={setMyFoodsQuery}
               onSubmitEditing={() => loadMyFoods(myFoodsQuery)}
@@ -211,43 +225,75 @@ export default function AddFoodScreen() {
           <FlatList
             data={myFoods}
             keyExtractor={item => item.id.toString()}
-            renderItem={({ item }) => (
+            renderItem={({ item, index }) => (
               <TouchableOpacity
-                style={styles.resultItem}
+                style={[styles.resultItem, index === 0 && styles.resultItemFirst, index === myFoods.length - 1 && styles.resultItemLast]}
                 onPress={() => (navigation as any).navigate('LogFood', {
                   food: { ...item, is_local: true, data_type: null, external_id: null, source: 'user' },
                   mealType, date,
                 })}>
                 <Text style={styles.resultName}>
                   {item.name}
-                  {!item.is_public && <Text style={styles.privateTag}>  · private</Text>}
+                  {!item.is_public && <Text style={styles.resultMeta}>  · private</Text>}
                 </Text>
-                <Text style={styles.resultCals}>{item.calories != null ? Math.round(item.calories * 100) : '?'} kcal per 100g</Text>
+                <Text style={styles.resultSub}>{item.calories != null ? Math.round(item.calories * 100) : '?'} kcal per 100g</Text>
               </TouchableOpacity>
             )}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
         </>
       )}
+      <KeyboardDismissButton />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  toggle: { flexDirection: 'row', backgroundColor: '#f0f0f0', borderRadius: 8, marginBottom: 16 },
-  toggleOption: { flex: 1, padding: 10, alignItems: 'center', borderRadius: 8 },
-  toggleActive: { backgroundColor: '#007AFF' },
-  toggleText: { fontWeight: '600', color: '#666' },
+  container: { flex: 1, backgroundColor: colors.bg, padding: 16 },
+
+  toggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.card,
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  toggleOption: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
+  toggleActive: { backgroundColor: colors.blue },
+  toggleText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
   toggleTextActive: { color: 'white' },
+
+  actionButton: {
+    backgroundColor: 'rgba(0,122,255,0.12)',
+    borderRadius: 10,
+    padding: 13,
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,122,255,0.25)',
+  },
+  actionButtonText: { fontSize: 15, fontWeight: '600', color: colors.blue },
+
   searchRow: { flexDirection: 'row', marginBottom: 12, gap: 8 },
-  searchInput: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
-  searchButton: { backgroundColor: '#007AFF', padding: 12, borderRadius: 8, justifyContent: 'center' },
+  searchInput: {
+    flex: 1,
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    borderRadius: 10,
+    padding: 12,
+    color: colors.textPrimary,
+  },
+  searchButton: { backgroundColor: colors.blue, paddingHorizontal: 16, borderRadius: 10, justifyContent: 'center' },
   searchButtonText: { color: 'white', fontWeight: '600' },
-  createButton: { backgroundColor: '#f0f0f0', borderRadius: 8, padding: 12, alignItems: 'center', marginBottom: 12 },
-  createButtonText: { fontSize: 15, fontWeight: '600', color: '#007AFF' },
-  resultItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  resultName: { fontSize: 16, fontWeight: '500' },
-  resultDataType: { color: '#999', fontWeight: '400', fontSize: 14 },
-  resultCals: { color: '#666', marginTop: 2 },
-  privateTag: { color: '#999', fontWeight: '400', fontSize: 14 },
+
+  resultItem: { paddingVertical: 12, paddingHorizontal: 16, backgroundColor: colors.card },
+  resultItemFirst: { borderTopLeftRadius: 12, borderTopRightRadius: 12 },
+  resultItemLast: { borderBottomLeftRadius: 12, borderBottomRightRadius: 12 },
+  separator: { height: 1, backgroundColor: colors.divider, marginLeft: 16 },
+  resultName: { fontSize: 15, fontWeight: '500', color: colors.textPrimary },
+  resultMeta: { fontSize: 13, fontWeight: '400', color: colors.textSecondary },
+  resultSub: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
 });

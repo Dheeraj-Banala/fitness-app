@@ -4,6 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
 import { searchFoods, FoodSearchResult } from '../services/foodSearch';
+import { colors, globalStyles } from '../theme';
+import KeyboardDismissButton from '../components/KeyboardDismissButton';
 
 type IngredientInput = {
   food_id: number;
@@ -40,7 +42,6 @@ export default function CreateRecipeScreen() {
     if (!selectedFood || !quantity) return;
     try {
       let foodId = selectedFood.id;
-
       if (!selectedFood.is_local) {
         const saved = await apiFetch('/foods/', token, {
           method: 'POST',
@@ -48,7 +49,6 @@ export default function CreateRecipeScreen() {
         });
         foodId = saved.id;
       }
-
       setIngredients([...ingredients, {
         food_id: foodId!,
         food_name: selectedFood.name,
@@ -73,11 +73,7 @@ export default function CreateRecipeScreen() {
           name,
           description: description || null,
           servings: parseFloat(servings) || 1,
-          ingredients: ingredients.map(i => ({
-            food_id: i.food_id,
-            quantity: i.quantity,
-            unit: i.unit,
-          })),
+          ingredients: ingredients.map(i => ({ food_id: i.food_id, quantity: i.quantity, unit: i.unit })),
         }),
       });
       navigation.goBack();
@@ -87,95 +83,141 @@ export default function CreateRecipeScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>New Recipe</Text>
+    <View style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
-      <TextInput style={styles.input} placeholder="Recipe Name" value={name} onChangeText={setName} />
-      <TextInput style={styles.input} placeholder="Description (optional)" value={description} onChangeText={setDescription} />
-      <TextInput style={styles.input} placeholder="Servings" value={servings} onChangeText={setServings} keyboardType="decimal-pad" />
-
-      <Text style={styles.sectionTitle}>Add Ingredient</Text>
-
-      {selectedFood ? (
-        <View style={styles.selectedFood}>
-          <Text style={styles.selectedFoodName}>{selectedFood.name}</Text>
+        <View style={globalStyles.card}>
           <TextInput
-            style={styles.input}
-            placeholder="Quantity (g)"
-            value={quantity}
-            onChangeText={setQuantity}
-            keyboardType="decimal-pad"
-          />
-          <TouchableOpacity style={styles.addButton} onPress={handleAddIngredient}>
-            <Text style={styles.addButtonText}>+ Add to Recipe</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setSelectedFood(null)}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
+                keyboardAppearance="dark" style={styles.input} placeholder="Recipe Name" placeholderTextColor={colors.textSecondary} value={name} onChangeText={setName} />
+          <View style={styles.inputDivider} />
+          <TextInput
+                keyboardAppearance="dark" style={styles.input} placeholder="Description (optional)" placeholderTextColor={colors.textSecondary} value={description} onChangeText={setDescription} />
+          <View style={styles.inputDivider} />
+          <TextInput
+                keyboardAppearance="dark" style={styles.input} placeholder="Servings" placeholderTextColor={colors.textSecondary} value={servings} onChangeText={setServings} keyboardType="decimal-pad" />
         </View>
-      ) : (
-        <View>
-          <View style={styles.searchRow}>
+
+        <Text style={styles.sectionTitle}>Add Ingredient</Text>
+
+        {selectedFood ? (
+          <View style={[globalStyles.card, styles.selectedCard]}>
+            <Text style={styles.selectedFoodName}>{selectedFood.name}</Text>
             <TextInput
-              style={styles.searchInput}
-              placeholder="Search foods..."
-              value={foodQuery}
-              onChangeText={setFoodQuery}
-              onSubmitEditing={handleFoodSearch}
-              returnKeyType="search"
+                keyboardAppearance="dark"
+              style={[globalStyles.input, { marginTop: 12, marginBottom: 0 }]}
+              placeholder="Quantity (g)"
+              placeholderTextColor={colors.textSecondary}
+              value={quantity}
+              onChangeText={setQuantity}
+              keyboardType="decimal-pad"
             />
-            <TouchableOpacity style={styles.searchButton} onPress={handleFoodSearch}>
-              <Text style={styles.searchButtonText}>Search</Text>
+            <TouchableOpacity style={styles.addBtn} onPress={handleAddIngredient}>
+              <Text style={styles.addBtnText}>+ Add to Recipe</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setSelectedFood(null)}>
+              <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
-          {foodResults.map((food, index) => (
-            <TouchableOpacity key={index} style={styles.foodResult} onPress={() => setSelectedFood(food)}>
-              <Text style={styles.foodResultName}>
-                {food.name}
-                {food.data_type ? <Text style={styles.foodResultDataType}>  ·  {food.data_type}</Text> : ''}
-              </Text>
-              <Text style={styles.foodResultCals}>{food.calories != null ? Math.round(food.calories * 100) : '?'} kcal per 100g</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+        ) : (
+          <>
+            <View style={styles.searchRow}>
+              <TextInput
+                keyboardAppearance="dark"
+                style={styles.searchInput}
+                placeholder="Search foods..."
+                placeholderTextColor={colors.textSecondary}
+                value={foodQuery}
+                onChangeText={setFoodQuery}
+                onSubmitEditing={handleFoodSearch}
+                returnKeyType="search"
+              />
+              <TouchableOpacity style={styles.searchButton} onPress={handleFoodSearch}>
+                <Text style={styles.searchButtonText}>Search</Text>
+              </TouchableOpacity>
+            </View>
+            {foodResults.length > 0 && (
+              <View style={globalStyles.card}>
+                {foodResults.map((food, index) => (
+                  <View key={index}>
+                    {index > 0 && <View style={styles.divider} />}
+                    <TouchableOpacity style={styles.resultItem} onPress={() => setSelectedFood(food)}>
+                      <Text style={styles.resultName}>
+                        {food.name}
+                        {food.data_type ? <Text style={styles.resultMeta}>  ·  {food.data_type}</Text> : ''}
+                      </Text>
+                      <Text style={styles.resultSub}>{food.calories != null ? Math.round(food.calories * 100) : '?'} kcal per 100g</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
 
-      <Text style={styles.sectionTitle}>Ingredients ({ingredients.length})</Text>
-      {ingredients.map((ing, index) => (
-        <View key={index} style={styles.ingredientItem}>
-          <Text style={styles.ingredientName}>{ing.food_name}</Text>
-          <Text style={styles.ingredientDetail}>{ing.quantity}{ing.unit}</Text>
-        </View>
-      ))}
+        {ingredients.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Ingredients ({ingredients.length})</Text>
+            <View style={globalStyles.card}>
+              {ingredients.map((ing, index) => (
+                <View key={index}>
+                  {index > 0 && <View style={styles.divider} />}
+                  <View style={styles.ingredientRow}>
+                    <Text style={styles.ingredientName}>{ing.food_name}</Text>
+                    <Text style={styles.ingredientDetail}>{ing.quantity}{ing.unit}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
 
-      <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
-        <Text style={styles.saveButtonText}>Save Recipe</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSubmit}>
+          <Text style={styles.saveBtnText}>Save Recipe</Text>
+        </TouchableOpacity>
+      </ScrollView>
+      <KeyboardDismissButton />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', marginTop: 16, marginBottom: 8 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12 },
-  searchRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  searchInput: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
-  searchButton: { backgroundColor: '#007AFF', padding: 12, borderRadius: 8, justifyContent: 'center' },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  content: { padding: 16, paddingBottom: 40 },
+
+  input: { paddingHorizontal: 16, paddingVertical: 13, color: colors.textPrimary, fontSize: 15 },
+  inputDivider: { height: 1, backgroundColor: colors.divider, marginHorizontal: 16 },
+
+  sectionTitle: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 24, marginBottom: 10 },
+
+  searchRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  searchInput: {
+    flex: 1,
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    borderRadius: 10,
+    padding: 12,
+    color: colors.textPrimary,
+  },
+  searchButton: { backgroundColor: colors.blue, paddingHorizontal: 16, borderRadius: 10, justifyContent: 'center' },
   searchButtonText: { color: 'white', fontWeight: '600' },
-  foodResult: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  foodResultName: { fontSize: 15, fontWeight: '500' },
-  foodResultDataType: { color: '#999', fontWeight: '400', fontSize: 14 },
-  foodResultCals: { color: '#666', marginTop: 2 },
-  selectedFood: { backgroundColor: '#f5f5f5', padding: 12, borderRadius: 8, marginBottom: 8 },
-  selectedFoodName: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
-  addButton: { backgroundColor: '#34C759', padding: 12, borderRadius: 8, alignItems: 'center', marginBottom: 8 },
-  addButtonText: { color: 'white', fontWeight: '600' },
-  cancelText: { color: '#FF3B30', textAlign: 'center', padding: 8 },
-  ingredientItem: { padding: 10, backgroundColor: '#f5f5f5', borderRadius: 8, marginBottom: 8 },
-  ingredientName: { fontWeight: '600' },
-  ingredientDetail: { color: '#666', marginTop: 2 },
-  saveButton: { backgroundColor: '#007AFF', padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 16, marginBottom: 32 },
-  saveButtonText: { color: 'white', fontWeight: '600', fontSize: 16 },
+
+  divider: { height: 1, backgroundColor: colors.divider, marginHorizontal: 16 },
+  resultItem: { paddingHorizontal: 16, paddingVertical: 12 },
+  resultName: { fontSize: 15, fontWeight: '500', color: colors.textPrimary },
+  resultMeta: { fontSize: 13, fontWeight: '400', color: colors.textSecondary },
+  resultSub: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+
+  selectedCard: { padding: 16 },
+  selectedFoodName: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+  addBtn: { backgroundColor: colors.success, borderRadius: 10, padding: 12, alignItems: 'center', marginTop: 12, marginBottom: 8 },
+  addBtnText: { color: 'white', fontWeight: '600' },
+  cancelText: { color: colors.destructive, textAlign: 'center', paddingVertical: 8, fontWeight: '500' },
+
+  ingredientRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+  ingredientName: { fontSize: 15, fontWeight: '500', color: colors.textPrimary },
+  ingredientDetail: { fontSize: 14, color: colors.textSecondary },
+
+  saveBtn: { backgroundColor: colors.blue, padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 24 },
+  saveBtnText: { color: 'white', fontWeight: '600', fontSize: 16 },
 });

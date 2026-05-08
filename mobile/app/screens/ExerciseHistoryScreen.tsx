@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { apiFetch } from '../services/api';
 import { kgToLbs } from '../utils/units';
+import { colors, globalStyles } from '../theme';
 
 type HistoryEntry = {
   date: string;
@@ -38,12 +39,12 @@ export default function ExerciseHistoryScreen() {
     return weightUnit === 'lbs' ? kgToLbs(kg) : Math.round(kg * 10) / 10;
   }
 
-  if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
+  if (loading) return <ActivityIndicator style={{ flex: 1, backgroundColor: colors.bg }} color={colors.blue} />;
 
   if (history.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyText}>No weight history yet for {exerciseName}.</Text>
+        <Text style={styles.emptyText}>No history yet for {exerciseName}.</Text>
         <Text style={styles.emptyHint}>Log a workout with weighted sets to see progress here.</Text>
       </View>
     );
@@ -80,21 +81,20 @@ export default function ExerciseHistoryScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.topSection}>
-        <Text style={styles.exerciseName}>{exerciseName}</Text>
 
         <View style={styles.statRow}>
-          <View style={styles.statCard}>
+          <View style={[globalStyles.card, styles.statCard]}>
             <Text style={styles.statLabel}>Latest max</Text>
             <Text style={styles.statValue}>{latestDisplay} {weightUnit}</Text>
           </View>
-          <View style={styles.statCard}>
+          <View style={[globalStyles.card, styles.statCard]}>
             <Text style={styles.statLabel}>All-time max</Text>
             <Text style={styles.statValue}>{Math.max(...allWeights)} {weightUnit}</Text>
           </View>
           {diff != null && (
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>vs last session</Text>
-              <Text style={[styles.statValue, { color: diff >= 0 ? '#34C759' : '#FF3B30' }]}>
+            <View style={[globalStyles.card, styles.statCard]}>
+              <Text style={styles.statLabel}>vs last</Text>
+              <Text style={[styles.statValue, { color: diff >= 0 ? colors.success : colors.destructive }]}>
                 {diff >= 0 ? '+' : ''}{diff} {weightUnit}
               </Text>
             </View>
@@ -130,6 +130,7 @@ export default function ExerciseHistoryScreen() {
         <Text style={styles.chartTitle}>
           {metric === 'weight' ? 'Max weight per session' : 'Max set volume per session'}
         </Text>
+
         {filtered.length < 2 ? (
           <Text style={styles.chartHint}>Not enough data in this range</Text>
         ) : (
@@ -138,11 +139,11 @@ export default function ExerciseHistoryScreen() {
             height={160}
             spacing={filtered.length > 20 ? 24 : 44}
             initialSpacing={8}
-            color="#007AFF"
+            color={colors.blue}
             thickness={2}
             curved
             scrollToEnd
-            dataPointsColor="#007AFF"
+            dataPointsColor={colors.blue}
             dataPointsRadius={3}
             yAxisOffset={minW - yPadding}
             maxValue={maxW - minW + yPadding * 2}
@@ -150,9 +151,10 @@ export default function ExerciseHistoryScreen() {
             yAxisTextStyle={styles.axisText}
             xAxisLabelTextStyle={styles.axisText}
             hideRules={false}
-            rulesColor="#e0e0e0"
-            yAxisColor="#e0e0e0"
-            xAxisColor="#e0e0e0"
+            rulesColor="rgba(255,255,255,0.06)"
+            yAxisColor="rgba(255,255,255,0.1)"
+            xAxisColor="rgba(255,255,255,0.1)"
+            backgroundColor="transparent"
           />
         )}
       </View>
@@ -171,26 +173,30 @@ export default function ExerciseHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.bg },
   topSection: { padding: 16 },
-  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#333', textAlign: 'center', marginBottom: 8 },
-  emptyHint: { fontSize: 14, color: '#888', textAlign: 'center' },
-  exerciseName: { fontSize: 22, fontWeight: 'bold', marginBottom: 16 },
-  statRow: { flexDirection: 'row', gap: 8, marginBottom: 24 },
-  statCard: { flex: 1, backgroundColor: '#f0f0f0', borderRadius: 10, padding: 12, alignItems: 'center' },
-  statLabel: { fontSize: 11, color: '#888', marginBottom: 4, textAlign: 'center' },
-  statValue: { fontSize: 16, fontWeight: '700', color: '#333' },
-  chartTitle: { fontSize: 15, fontWeight: '600', color: '#555', marginBottom: 12 },
-  chartHint: { color: '#888', fontSize: 14, marginBottom: 16 },
-  axisText: { fontSize: 10, color: '#999' },
-  historyTitle: { fontSize: 15, fontWeight: '600', color: '#555', marginTop: 8, marginBottom: 8, paddingHorizontal: 16 },
-  historyRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  historyDate: { fontSize: 14, color: '#555' },
-  historyWeight: { fontSize: 14, fontWeight: '600', color: '#333' },
-  toggleRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  toggleBtn: { flex: 1, paddingVertical: 6, borderRadius: 8, backgroundColor: '#f0f0f0', alignItems: 'center' },
-  toggleBtnActive: { backgroundColor: '#007AFF' },
-  toggleText: { fontSize: 13, fontWeight: '600', color: '#555' },
+
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: colors.bg },
+  emptyText: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, textAlign: 'center', marginBottom: 8 },
+  emptyHint: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
+
+  statRow: { flexDirection: 'row', gap: 8, marginBottom: 20 },
+  statCard: { flex: 1, padding: 12, alignItems: 'center' },
+  statLabel: { fontSize: 11, color: colors.textSecondary, marginBottom: 4, textAlign: 'center' },
+  statValue: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+
+  toggleRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  toggleBtn: { flex: 1, paddingVertical: 7, borderRadius: 8, backgroundColor: colors.card, alignItems: 'center', borderWidth: 1, borderColor: colors.cardBorder },
+  toggleBtnActive: { backgroundColor: colors.blue, borderColor: colors.blue },
+  toggleText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   toggleTextActive: { color: 'white' },
+
+  chartTitle: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 },
+  chartHint: { color: colors.textSecondary, fontSize: 14, marginBottom: 16 },
+  axisText: { fontSize: 10, color: colors.textSecondary },
+
+  historyTitle: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8, paddingHorizontal: 16 },
+  historyRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.divider },
+  historyDate: { fontSize: 14, color: colors.textSecondary },
+  historyWeight: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
 });

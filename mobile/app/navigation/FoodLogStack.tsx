@@ -14,11 +14,15 @@ const Stack = createNativeStackNavigator();
 
 export default function FoodLogStack() {
     return (
-        <Stack.Navigator>
-            <Stack.Screen name="FoodLog" component={FoodLogScreen} />
-            <Stack.Screen name="AddFood" component={AddFoodScreen} />
+        <Stack.Navigator screenOptions={{
+            headerStyle: { backgroundColor: '#1A1A2E' },
+            headerTintColor: '#F0F0F5',
+            headerTitleStyle: { fontWeight: '600' },
+        }}>
+            <Stack.Screen name="FoodLog" component={FoodLogScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="AddFood" component={AddFoodScreen} options={{ title: 'Add Food' }} />
             <Stack.Screen name="Micronutrients" component={MicronutrientsScreen} options={{ title: 'Micronutrients' }} />
-            <Stack.Screen name="Barcode" component={BarcodeScannerScreen} />
+            <Stack.Screen name="Barcode" component={BarcodeScannerScreen} options={{ title: 'Scan Barcode' }} />
             <Stack.Screen name="LogFood" component={LogFoodScreen} options={{ title: 'Log Food' }} />
             <Stack.Screen name="CreateFood" component={CreateFoodScreen} options={{ title: 'Create Food' }} />
             <Stack.Screen name="EditFood" component={EditFoodScreen} options={{ title: 'Edit Food' }} />

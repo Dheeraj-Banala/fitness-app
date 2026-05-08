@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, FlatList, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import Animated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
-import { useAuth } from "../context/AuthContext";
-import { usePreferences } from "../context/PreferencesContext";
-import { apiFetch } from "../services/api";
-import { mlToOz, ozToMl } from "../utils/units";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
+import { usePreferences } from '../context/PreferencesContext';
+import { apiFetch } from '../services/api';
+import { mlToOz, ozToMl } from '../utils/units';
+import { colors, globalStyles } from '../theme';
+import KeyboardDismissButton from '../components/KeyboardDismissButton';
 
 const DELETE_WIDTH = 80;
 
@@ -30,7 +33,7 @@ type WaterLog = {
   amount_ml: number;
   date: string;
   created_at: string;
-}
+};
 
 function toLocalDateString(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -39,6 +42,7 @@ function toLocalDateString(d: Date): string {
 export default function WaterScreen() {
   const { token } = useAuth();
   const { volumeUnit } = usePreferences();
+  const insets = useSafeAreaInsets();
   const [logs, setLogs] = useState<WaterLog[]>([]);
   const [amount, setAmount] = useState('');
   const [goalWater, setGoalWater] = useState<number | null>(null);
@@ -48,10 +52,7 @@ export default function WaterScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const hasScrolled = useRef(false);
 
-  useEffect(() => {
-    loadLogs();
-    loadGoals();
-  }, []);
+  useEffect(() => { loadLogs(); loadGoals(); }, []);
 
   async function loadGoals() {
     try {
@@ -99,10 +100,7 @@ export default function WaterScreen() {
       const amountMl = volumeUnit === 'oz' ? ozToMl(parseFloat(amount)) : parseFloat(amount);
       await apiFetch('/water-logs/', token, {
         method: 'POST',
-        body: JSON.stringify({
-          amount_ml: amountMl,
-          date: toLocalDateString(new Date()),
-        }),
+        body: JSON.stringify({ amount_ml: amountMl, date: toLocalDateString(new Date()) }),
       });
       setAmount('');
       loadLogs();
@@ -115,16 +113,13 @@ export default function WaterScreen() {
   const today = toLocalDateString(new Date());
   const barWidth = chartWidth > 0 ? chartWidth / VISIBLE_DAYS : 0;
   const chartHeight = 100;
-
   const displayVol = (ml: number) => volumeUnit === 'oz' ? mlToOz(ml) : Math.round(ml);
   const displayGoal = goalWater != null ? displayVol(goalWater) : null;
-
   const total = todayTotal();
   const ratio = goalWater ? Math.min(total / goalWater, 1) : 0;
   const todayLogs = logs.filter(l => l.date === today).slice().reverse();
   const maxTotal = Math.max(...days.map(d => d.total), goalWater ?? 1, 1);
 
-  // Scroll to show today on the right edge once layout is known
   useEffect(() => {
     if (barWidth > 0 && !hasScrolled.current) {
       scrollRef.current?.scrollTo({ x: (HISTORY_DAYS - VISIBLE_DAYS) * barWidth, animated: false });
@@ -132,7 +127,6 @@ export default function WaterScreen() {
     }
   }, [barWidth]);
 
-  // Derive the visible date range label from scroll position
   const firstVisibleIdx = barWidth > 0 ? Math.round(scrollX / barWidth) : HISTORY_DAYS - VISIBLE_DAYS;
   const clampedFirst = Math.max(0, Math.min(firstVisibleIdx, days.length - VISIBLE_DAYS));
   const visibleSlice = days.slice(clampedFirst, clampedFirst + VISIBLE_DAYS);
@@ -142,109 +136,128 @@ export default function WaterScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Water Log</Text>
-
-      <View style={styles.card}>
-        <View style={styles.progressLabelRow}>
-          <Text style={styles.progressLabel}>Today</Text>
-          <Text style={styles.progressValue}>{displayVol(total)} / {displayGoal ?? '—'} {volumeUnit}</Text>
-        </View>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
-        </View>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.chartTitle}>{rangeLabel}</Text>
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          snapToInterval={barWidth > 0 ? barWidth : undefined}
-          decelerationRate="fast"
-          bounces={false}
-          onLayout={e => setChartWidth(e.nativeEvent.layout.width)}
-          onScroll={e => setScrollX(e.nativeEvent.contentOffset.x)}
-          scrollEventThrottle={16}
-          style={styles.chartClip}
-        >
-          <View style={{ flexDirection: 'row' }}>
-            {days.map((day, index) => (
-              <View key={index} style={{ width: barWidth, alignItems: 'center' }}>
-                <View style={{ height: chartHeight, justifyContent: 'flex-end' }}>
-                  <View style={{
-                    width: barWidth * 0.55,
-                    borderRadius: 3,
-                    height: day.total > 0 ? Math.max((day.total / maxTotal) * chartHeight, 4) : 0,
-                    backgroundColor: day.date === today ? '#007AFF' : '#93C5FD',
-                  }} />
-                </View>
-                <Text style={styles.barLabel}>{day.label}</Text>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-        <Text style={styles.swipeHint}>Swipe to navigate</Text>
-      </View>
-
-      <View style={styles.inputRow}>
-        <TextInput
-          style={styles.input}
-          placeholder={`Amount (${volumeUnit})`}
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="decimal-pad"
-        />
-        <Button title="Add" onPress={handleAdd} />
-      </View>
-
       <FlatList
         data={todayLogs}
         keyExtractor={item => item.id.toString()}
-        renderItem={({ item }) => (
+        contentContainerStyle={{ padding: 16, paddingTop: insets.top + 16, paddingBottom: 24 }}
+        ListHeaderComponent={
+          <>
+            <Text style={styles.screenTitle}>Water</Text>
+
+            <View style={[globalStyles.card, styles.progressCard]}>
+              <View style={styles.progressLabelRow}>
+                <Text style={styles.progressLabel}>Today</Text>
+                <Text style={styles.progressValue}>{displayVol(total)} / {displayGoal ?? '—'} {volumeUnit}</Text>
+              </View>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
+              </View>
+            </View>
+
+            <View style={[globalStyles.card, styles.chartCard]}>
+              <Text style={styles.chartTitle}>{rangeLabel}</Text>
+              <ScrollView
+                ref={scrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={barWidth > 0 ? barWidth : undefined}
+                decelerationRate="fast"
+                bounces={false}
+                onLayout={e => setChartWidth(e.nativeEvent.layout.width)}
+                onScroll={e => setScrollX(e.nativeEvent.contentOffset.x)}
+                scrollEventThrottle={16}
+              >
+                <View style={{ flexDirection: 'row' }}>
+                  {days.map((day, index) => (
+                    <View key={index} style={{ width: barWidth, alignItems: 'center' }}>
+                      <View style={{ height: chartHeight, justifyContent: 'flex-end' }}>
+                        <View style={{
+                          width: barWidth * 0.55,
+                          borderRadius: 4,
+                          height: day.total > 0 ? Math.max((day.total / maxTotal) * chartHeight, 4) : 0,
+                          backgroundColor: day.date === today ? colors.blue : 'rgba(0,122,255,0.3)',
+                        }} />
+                      </View>
+                      <Text style={styles.barLabel}>{day.label}</Text>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+              <Text style={styles.swipeHint}>Swipe to navigate</Text>
+            </View>
+
+            <View style={styles.inputRow}>
+              <TextInput
+                keyboardAppearance="dark"
+                style={[globalStyles.input, { flex: 1, marginBottom: 0 }]}
+                placeholder={`Amount (${volumeUnit})`}
+                placeholderTextColor={colors.textSecondary}
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="decimal-pad"
+              />
+              <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+                <Text style={styles.addBtnText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            {todayLogs.length > 0 && <Text style={styles.sectionLabel}>Today's logs</Text>}
+          </>
+        }
+        renderItem={({ item, index }) => (
           <Swipeable
             overshootRight={false}
             renderRightActions={(_, drag) => (
               <DeleteAction drag={drag} onDelete={() => handleDelete(item.id)} />
             )}
           >
-            <View style={styles.logItem}>
-              <View style={styles.logRow}>
-                <View>
-                  <Text style={styles.logAmount}>{displayVol(item.amount_ml)} {volumeUnit}</Text>
-                  <Text style={styles.logDate}>{new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-                </View>
-              </View>
+            <View style={[
+              styles.logItem,
+              index === 0 && styles.logItemFirst,
+              index === todayLogs.length - 1 && styles.logItemLast,
+            ]}>
+              <Text style={styles.logAmount}>{displayVol(item.amount_ml)} {volumeUnit}</Text>
+              <Text style={styles.logTime}>{new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
             </View>
           </Swipeable>
         )}
-        style={styles.logList}
+        ItemSeparatorComponent={() => <View style={styles.logDivider} />}
       />
+      <KeyboardDismissButton />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
-  card: { backgroundColor: '#f0f0f0', borderRadius: 10, padding: 14, marginBottom: 16 },
-  progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  progressLabel: { fontSize: 14, fontWeight: '500', color: '#333' },
-  progressValue: { fontSize: 13, color: '#666' },
-  progressTrack: { height: 8, backgroundColor: '#e0e0e0', borderRadius: 4 },
-  progressFill: { height: 8, borderRadius: 4, backgroundColor: '#007AFF' },
-  chartTitle: { fontSize: 13, color: '#666', marginBottom: 12, textAlign: 'center' },
-  chartClip: { overflow: 'hidden' },
-  barLabel: { fontSize: 10, color: '#666', marginTop: 4 },
-  swipeHint: { fontSize: 11, color: '#aaa', textAlign: 'center', marginTop: 8 },
-  inputRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 12 },
-  input: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
-  logList: { flex: 1 },
-  logItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  logRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  logAmount: { fontSize: 18, fontWeight: '600' },
-  logDate: { color: '#666', marginTop: 4 },
-  deleteButton: { color: '#FF3B30', fontSize: 16, paddingLeft: 12 },
-  swipeDelete: { backgroundColor: '#FF3B30', justifyContent: 'center', alignItems: 'center', width: DELETE_WIDTH },
+  container: { flex: 1, backgroundColor: colors.bg },
+
+  screenTitle: { fontSize: 34, fontWeight: '700', color: colors.textPrimary, marginBottom: 16 },
+
+  progressCard: { padding: 16, marginBottom: 14 },
+  progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  progressLabel: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  progressValue: { fontSize: 14, color: colors.textSecondary },
+  progressTrack: { height: 8, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 4 },
+  progressFill: { height: 8, borderRadius: 4, backgroundColor: colors.blue },
+
+  chartCard: { padding: 14, marginBottom: 14 },
+  chartTitle: { fontSize: 12, color: colors.textSecondary, marginBottom: 10, textAlign: 'center' },
+  barLabel: { fontSize: 9, color: colors.textSecondary, marginTop: 4 },
+  swipeHint: { fontSize: 11, color: colors.textSecondary, textAlign: 'center', marginTop: 10 },
+
+  inputRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 20 },
+  addBtn: { backgroundColor: colors.blue, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 16 },
+  addBtnText: { color: 'white', fontWeight: '600', fontSize: 15 },
+
+  sectionLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
+
+  logItem: { backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  logItemFirst: { borderTopLeftRadius: 12, borderTopRightRadius: 12 },
+  logItemLast: { borderBottomLeftRadius: 12, borderBottomRightRadius: 12 },
+  logDivider: { height: 1, backgroundColor: colors.divider, marginLeft: 16 },
+  logAmount: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+  logTime: { fontSize: 13, color: colors.textSecondary },
+
+  swipeDelete: { backgroundColor: colors.destructive, justifyContent: 'center', alignItems: 'center', width: DELETE_WIDTH },
   swipeDeleteText: { color: 'white', fontWeight: '600', fontSize: 15 },
 });
