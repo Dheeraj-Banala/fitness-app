@@ -1,4 +1,4 @@
-const BASE_URL = 'https://food-fitness-app.fly.dev';
+const BASE_URL = 'https://fitness-app-9hjq.onrender.com';
 
 let _refreshToken: string | null = null;
 let _onTokenRefresh: ((newToken: string) => void) | null = null;

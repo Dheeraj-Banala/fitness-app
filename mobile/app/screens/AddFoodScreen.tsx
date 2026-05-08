@@ -62,6 +62,7 @@ export default function AddFoodScreen() {
   useFocusEffect(
     useCallback(() => {
       if (mode === 'mine') loadMyFoods();
+      if (mode === 'recipe') loadRecipes('');
     }, [mode])
   );
 

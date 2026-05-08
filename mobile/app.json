@@ -25,6 +25,18 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9a3ddcdf-3c9e-4390-a187-1d490b4bb543"
+      }
+    },
+    "owner": "dheerajbanala",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/9a3ddcdf-3c9e-4390-a187-1d490b4bb543"
     }
   }
 }

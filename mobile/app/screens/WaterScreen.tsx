@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { View, Text, TextInput, FlatList, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import Animated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { apiFetch } from '../services/api';
@@ -52,7 +53,7 @@ export default function WaterScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const hasScrolled = useRef(false);
 
-  useEffect(() => { loadLogs(); loadGoals(); }, []);
+  useFocusEffect(useCallback(() => { loadLogs(); loadGoals(); }, []));
 
   async function loadGoals() {
     try {

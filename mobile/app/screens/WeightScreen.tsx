@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { apiFetch } from '../services/api';
@@ -31,7 +32,7 @@ export default function WeightScreen() {
   const [notes, setNotes] = useState('');
   const [range, setRange] = useState<Range>('90');
 
-  useEffect(() => { loadLogs(); }, []);
+  useFocusEffect(useCallback(() => { loadLogs(); }, []));
 
   async function loadLogs() {
     try {

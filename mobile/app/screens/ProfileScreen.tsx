@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { apiFetch } from '../services/api';
@@ -46,7 +47,7 @@ export default function ProfileScreen() {
   const [selectedHeight, setSelectedHeight] = useState<'cm' | 'ft_in'>(heightUnit);
   const [saved, setSaved] = useState({ weight: weightUnit, volume: volumeUnit, height: heightUnit, feet: '', inches: '', cm: '' });
 
-  useEffect(() => { loadProfile(); }, []);
+  useFocusEffect(useCallback(() => { loadProfile(); }, []));
   useEffect(() => {
     setSelectedWeight(weightUnit);
     setSelectedVolume(volumeUnit);
