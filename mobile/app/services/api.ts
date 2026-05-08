@@ -1,4 +1,4 @@
-const BASE_URL = 'http://192.168.0.57:8000';
+const BASE_URL = 'https://food-fitness-app.fly.dev';
 
 let _refreshToken: string | null = null;
 let _onTokenRefresh: ((newToken: string) => void) | null = null;
