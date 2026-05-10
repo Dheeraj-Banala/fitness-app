@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 from .database import Base, engine
 from .models import user, food, recipe, food_log, workout, water_log, weight_log, user_goals, refresh_token, exercise
 from .routes import weight_log as weight_log_router
@@ -11,9 +12,12 @@ from .routes import user as user_router
 from .routes import user_goals as user_goals_router
 from .routes import exercise as exercise_router
 
-Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(app):
+    Base.metadata.create_all(bind=engine)
+    yield
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 app.include_router(weight_log_router.router)
 app.include_router(water_log_router.router)
@@ -28,4 +32,3 @@ app.include_router(exercise_router.router)
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
-
