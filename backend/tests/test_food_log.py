@@ -69,3 +69,26 @@ def test_food_log_scaling_math(client):
     assert round(log["food"]["calories"] * scale) == 1000  # 4 * 250
     assert round(log["food"]["protein"] * scale) == 250   # 1 * 250
     assert round(log["food"]["carbs"] * scale) == 125     # 0.5 * 250
+
+def test_patch_food(client):
+    tokens = register_and_login(client)
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    food = client.post("/foods/", json={
+        "name": "Original Name",
+        "calories": 4.0,
+        "protein": 1.0,
+        "carbs": 0.5,
+        "fat": 0.1,
+        "serving_size": 100,
+        "serving_unit": "g",
+        "is_public": False,
+    }, headers=headers).json()
+
+    updated = client.patch(f"/foods/{food['id']}", json={
+        "name": "Updated Name",
+        "calories": 2.0,
+    }, headers=headers).json()
+
+    assert updated["name"] == "Updated Name"
+    assert updated["calories"] == 2.0

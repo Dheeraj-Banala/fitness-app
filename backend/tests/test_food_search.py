@@ -24,3 +24,16 @@ def test_usda_fallback_to_off(client):
 
     assert response.status_code == 200
     assert response.json() == fake_result
+
+def test_barcode_lookup(client):
+    tokens = register_and_login(client)
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    fake_result = {"name": "Scanned Food", "calories": 0.03}
+
+    with patch("app.services.food_api.lookup_barcode", return_value=fake_result):
+        response = client.get("/foods/barcode/012345678901", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "Scanned Food"
+
