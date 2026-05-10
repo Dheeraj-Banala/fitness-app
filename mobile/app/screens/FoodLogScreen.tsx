@@ -102,6 +102,22 @@ export default function FoodLogScreen() {
     } catch (e) {}
   }
 
+  function mealTotals(mealLogs: FoodLogEntry[]) {
+    let calories = 0, protein = 0, carbs = 0, fat = 0;
+    for (const log of mealLogs) {
+      const isRecipe = !!log.recipe_id;
+      const scale = isRecipe
+        ? log.quantity / (log.recipe?.servings ?? 1)
+        : scaleFood(log.quantity, log.unit, log.food?.default_serving_g ?? null);
+      const source = isRecipe ? log.recipe : log.food;
+      calories += source?.calories ? source.calories * scale : 0;
+      protein  += source?.protein  ? source.protein  * scale : 0;
+      carbs    += source?.carbs    ? source.carbs    * scale : 0;
+      fat      += source?.fat      ? source.fat      * scale : 0;
+    }
+    return { calories: Math.round(calories), protein: Math.round(protein), carbs: Math.round(carbs), fat: Math.round(fat) };
+  }
+
   function dailyTotals() {
     let calories = 0, protein = 0, carbs = 0, fat = 0, fiber = 0;
     const micros: Record<string, number> = {
@@ -196,10 +212,17 @@ export default function FoodLogScreen() {
       {/* Meal sections */}
       {MEAL_TYPES.map(mealType => {
         const mealLogs = logsForMeal(mealType);
+        const mt = mealTotals(mealLogs);
         return (
           <View key={mealType} style={[globalStyles.card, styles.mealCard]}>
             <View style={styles.mealHeader}>
               <Text style={styles.mealTitle}>{mealType.toUpperCase()}</Text>
+              {mealLogs.length > 0 && (
+                <Text style={styles.mealMacros} numberOfLines={1}>
+                  <Text style={styles.mealCals}>{mt.calories} kcal </Text>
+                  <Text style={styles.mealMacroText}><Text style={{ color: colors.blue }}>P:{mt.protein} </Text><Text style={{ color: colors.success }}>C:{mt.carbs} </Text><Text style={{ color: colors.purple }}>F:{mt.fat}</Text></Text>
+                </Text>
+              )}
               <TouchableOpacity onPress={() => (navigation as any).navigate('AddFood', { mealType, date })}>
                 <Text style={styles.addBtn}>＋</Text>
               </TouchableOpacity>
@@ -284,6 +307,9 @@ const styles = StyleSheet.create({
   mealCard: { marginBottom: 14, overflow: 'hidden' },
   mealHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   mealTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary, letterSpacing: 0.5 },
+  mealMacros: { flex: 1, textAlign: 'right', marginHorizontal: 8 },
+  mealCals: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
+  mealMacroText: { fontSize: 11, fontWeight: '500' },
   addBtn: { fontSize: 22, color: colors.blue, lineHeight: 26 },
 
   divider: { height: 1, backgroundColor: colors.divider },

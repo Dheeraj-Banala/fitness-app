@@ -55,7 +55,10 @@ export default function AddFoodScreen() {
   useFocusEffect(
     useCallback(() => {
       const code = (route.params as any)?.barcode;
-      if (code) handleBarcodeResult(code);
+      if (code) {
+        handleBarcodeResult(code);
+        navigation.setParams({ barcode: undefined } as any);
+      }
     }, [route.params])
   );
 
