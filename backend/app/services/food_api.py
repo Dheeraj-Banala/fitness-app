@@ -67,6 +67,23 @@ def _off_nutrients(nutriments: dict) -> dict:
         "folate": None,
     }
 
+def _off_product_to_food(product: dict) -> dict | None:
+    """Map one Open Food Facts product to our common food shape. None if unusable."""
+    name = (product.get("product_name") or "").strip()
+    if not name:
+        return None
+    serving_name, serving_g = _parse_off_serving(product.get("serving_size"))
+    return {
+        "name": name,
+        "source": "open_food_facts",
+        "serving_size": 1,
+        "serving_unit": "g",
+        "default_serving_name": serving_name,
+        "default_serving_g": serving_g,
+        **_off_nutrients(product.get("nutriments", {})),
+    }
+
+
 def search_open_food_facts(query: str) -> list[dict]:
     params = {
         "search_terms": query,
@@ -82,19 +99,9 @@ def search_open_food_facts(query: str) -> list[dict]:
 
     results = []
     for product in data.get("products", []):
-        name = product.get("product_name", "").strip()
-        if not name:
-            continue
-        serving_name, serving_g = _parse_off_serving(product.get("serving_size"))
-        results.append({
-            "name": name,
-            "source": "open_food_facts",
-            "serving_size": 1,
-            "serving_unit": "g",
-            "default_serving_name": serving_name,
-            "default_serving_g": serving_g,
-            **_off_nutrients(product.get("nutriments", {})),
-        })
+        food = _off_product_to_food(product)
+        if food is not None:
+            results.append(food)
     return results
 
 def lookup_barcode(barcode: str) -> dict | None:
@@ -108,21 +115,7 @@ def lookup_barcode(barcode: str) -> dict | None:
     if data.get("status") != 1:
         return None
 
-    product = data.get("product", {})
-    name = product.get("product_name", "").strip()
-    if not name:
-        return None
-
-    serving_name, serving_g = _parse_off_serving(product.get("serving_size"))
-    return {
-        "name": name,
-        "source": "open_food_facts",
-        "serving_size": 1,
-        "serving_unit": "g",
-        "default_serving_name": serving_name,
-        "default_serving_g": serving_g,
-        **_off_nutrients(product.get("nutriments", {})),
-    }
+    return _off_product_to_food(data.get("product", {}))
 
 def _pos(value):
     return max(0, value) if value is not None else None

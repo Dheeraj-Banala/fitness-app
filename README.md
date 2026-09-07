@@ -69,7 +69,30 @@ A production-deployed iOS fitness tracking app built end-to-end — from databas
 | Food API | USDA → Open Food Facts fallback, barcode lookup |
 | PATCH endpoints | Food and recipe field updates |
 
-GitHub Actions runs the full suite on every push to `master` using a Postgres service container.
+GitHub Actions runs the full suite on every push to `master`. The suite is self-contained — it runs
+against a SQLite file database and needs no external services.
+
+### Running the backend locally
+
+`SECRET_KEY` is **required**; the app refuses to start without it rather than falling back to a default.
+
+```bash
+export SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export DATABASE_URL="postgresql://postgres:password@localhost/food_and_fitness"  # or any SQLAlchemy URL
+uvicorn app.main:app --reload
+```
+
+| Variable | Required | Notes |
+|---|---|---|
+| `SECRET_KEY` | yes | JWT signing key. Startup fails if unset. |
+| `DATABASE_URL` | no | Defaults to local Postgres. Any SQLAlchemy URL works; SQLite is used by the tests. |
+| `USDA_API_KEY` | no | Enables USDA food search. Without it, search falls back to Open Food Facts. |
+
+Tests need no configuration — `conftest.py` sets both variables before importing the app:
+
+```bash
+cd backend && pytest tests/ -v
+```
 
 ---
 

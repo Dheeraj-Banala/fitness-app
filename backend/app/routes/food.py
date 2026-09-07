@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
-from typing import Any
+import httpx
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.food import Food
-from ..schemas.food import FoodCreate, FoodResponse
+from ..schemas.food import FoodCreate, FoodResponse, FoodUpdate
 from ..auth import get_current_user
-from ..services.food_api import search_open_food_facts, search_usda
+from ..services.food_api import search_open_food_facts, search_usda, lookup_barcode
 
 router = APIRouter(prefix="/foods", tags=["foods"])
 
@@ -35,17 +35,17 @@ def get_my_foods(search: str | None = None, current_user = Depends(get_current_u
 def search_external_foods(query: str, current_user = Depends(get_current_user)):
     try:
         return search_usda(query)
-    except Exception:
+    except httpx.HTTPError:
+        # USDA unreachable or returned an error status; fall back to Open Food Facts.
         return search_open_food_facts(query)
 
 @router.patch("/{food_id}", response_model=FoodResponse)
-def update_food(food_id: int, updates: dict[str, Any] = Body(...), current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_food(food_id: int, updates: FoodUpdate, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
     food = db.query(Food).filter(Food.id == food_id, Food.user_id == current_user.id).first()
     if food is None:
         raise HTTPException(status_code=404, detail="Food not found")
-    for key, value in updates.items():
-        if hasattr(food, key):
-            setattr(food, key, value)
+    for key, value in updates.model_dump(exclude_unset=True).items():
+        setattr(food, key, value)
     db.commit()
     db.refresh(food)
     return food
@@ -69,7 +69,6 @@ def delete_food(food_id: int, current_user = Depends(get_current_user), db: Sess
 
 @router.get("/barcode/{barcode}")
 def lookup_food_by_barcode(barcode: str):
-    from ..services.food_api import lookup_barcode
     result = lookup_barcode(barcode)
     if result is None:
         raise HTTPException(status_code=404, detail="Barcode not found")
